@@ -1,0 +1,3314 @@
+﻿Option Explicit
+    
+    'Get values from other sheets
+    Dim d_LTCR As Double
+    Dim d_Mfvolume As Double
+    
+    Dim d_S0   'original reservoir size
+    Dim d_Se  'exsting reservoir size
+    
+    Dim d_Wbot	'水库底部宽度
+    Dim d_SSres	'水库坡度
+    Dim d_ELmax	'水库顶部高程
+    Dim d_ELmin	'水库底部高程
+    Dim d_ELf	'flush过程中水面高度
+    Dim d_L		'正常水面高度时的水库长度
+    Dim d_HH	'水库正常高程减去下游河床高程
+    
+    Dim d_MAR	'每年入库流量
+    Dim d_Cv	'每年径流量变化程度
+    Dim d_Pr As Double	'=0.01
+    Dim d_T		'水库典型水温
+    
+    Dim d_pdpd	'水库底部淤积典型密度
+    Dim d_Min	'年平均流入沙量
+    Dim d_phi	'沉积物大小，有可选值
+    Dim d_Brune	'泥沙性质，有可选值
+    Dim d_Ans	'去除沉积物的难度
+    Dim d_Type	'HSRS（液压抽吸除淤）去除的泥沙类型，有可选值
+    
+    Dim d_H  'binary choice 0是否是水电站
+    Dim d_Of	'典型冲沙流量
+    Dim d_Tf	'水位完全下降后冲沙时间
+    Dim i_N		'flush频率
+    Dim d_dd	'液压抽吸管道直径
+    Dim d_NP	'用于抽吸的管道数量
+    Dim d_YA	'抽吸过程可被排到下游的部分占总量的百分数，0-1
+    Dim d_CLF	'冲刷过程中允许的最大容量损失比
+    Dim d_CLH	'抽吸过程中允许的最大容量损失比
+    Dim d_CLD	'dredging（常规挖沙）过程允许的最大容量损失比
+    Dim d_CLT	'trucking（水库干旱时的类似地面挖沙）过程允许的最大容量损失比
+    Dim d_ASD	'dredging去除沉积物的最大百分比
+    Dim d_AST	'trucking去除沉积物的最大百分比
+    Dim d_MD	'dredging去除沉积物的最大体积
+    Dim d_MT	'trucking去除沉积物的最大体积
+    
+    
+    Dim d_Cw	'通过dredge去除水中沉淀物的重量浓度
+    
+    Dim d_E  'binary choice 0 if exsting dam是否为现存的大坝
+    Dim d_c		'建造的单位成本
+    Dim d_C2	'大坝施工总成本
+    Dim D_R		'贴现率
+    Dim D_MR	'用于计算年度退休基金的市场利率
+    Dim d_P1	'水库产水量的单位价值
+    Dim d_DC	'救助价值
+    Dim d_omc	'运维系数，运维成本占初始建设成本的比率
+    Dim d_PH	'抽吸过程流入下游水量的单位价值
+    Dim d_PD	'dredge过程的水的单位价值
+    Dim d_CH	'产生的额外用水费用
+    Dim s_ECD As String  'CD entered by user 用户估算的dredge的单位花费
+    Dim d_CT	'用户估算的truck的单位花费
+    Dim d_FI	'安装flush系统的成本
+    Dim d_HI	'安装HSRS的成本
+    Dim d_DU	'HSRS的预期寿命
+    
+    Dim d_M As Double
+    Dim d_sd As Double
+    Dim d_Zpr As Double
+    Dim d_Gd As Double
+    Dim d_C1 As Double
+    Dim d_d As Double
+    Dim d_CD As Double
+    
+    Dim d_s1	'一年中冲刷的河道效益的比率
+    Dim d_s2	'一年中冲刷的库容效益的比率
+    
+    Dim TNPV_H_PR_R As Double
+    Dim i_Year_H_Max As Double
+    Dim d_Send_H As Double
+    
+    
+    
+Option Base 1
+
+'Main
+'
+Sub CalculateButton()
+    On Error GoTo HandleErr
+    
+    Dim ErrorFlag As Boolean    'True=No Errors, False=Error occured
+    ErrorFlag = True
+    
+    
+    
+    
+        
+    d_S0 = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D11").Value
+    d_Se = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D12").Value
+    
+    d_Wbot = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D13").Value
+    d_SSres = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D14").Value
+    d_ELmax = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D15").Value
+    d_ELmin = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D16").Value
+    d_ELf = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D17").Value
+    d_L = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D18").Value
+    d_HH = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D19").Value
+    d_MAR = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D22").Value
+    d_Cv = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D23").Value
+    d_Pr = 0.01
+    d_T = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D24").Value
+    d_pdpd = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D28").Value
+    d_Min = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D29").Value
+    d_phi = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D30").Value
+    d_Brune = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D31").Value
+    d_Ans = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D32").Value
+    d_Type = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D33").Value
+    d_H = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D36").Value
+    d_Of = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D37").Value
+    d_Tf = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D38").Value
+    i_N = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D39").Value
+    d_dd = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D40").Value
+    d_NP = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D41").Value
+    d_YA = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D42").Value
+    
+    d_CLF = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D43").Value
+    d_CLH = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D44").Value
+    d_CLD = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D45").Value
+    d_CLT = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D46").Value
+    
+    d_ASD = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D47").Value
+    d_AST = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D48").Value
+    
+    d_MD = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D49").Value
+    d_MT = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D50").Value
+    
+    d_Cw = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D51").Value
+    
+    
+    d_E = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D55").Value
+
+    D_R = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D58").Value
+    D_MR = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D59").Value
+    
+    d_P1 = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D60").Value
+    d_DC = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D61").Value
+    d_omc = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D62").Value
+    d_PH = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D63").Value
+    d_PD = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D64").Value
+    
+    d_CH = ThisWorkbook.Worksheets("Parameters").Range("D32").Value
+    
+    s_ECD = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D65").Value
+    d_CT = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D66").Value
+    d_FI = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D73").Value
+    d_HI = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D74").Value
+    d_DU = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D75").Value
+    d_s1 = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D69").Value
+    d_s2 = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D70").Value
+    
+    ErrorFlag = F_Dataentry  ' 输入数据合法性检查
+    If ErrorFlag = True Then  '如果没有错误继续执行
+    
+    
+    ErrorFlag = F_Datacheck  '数据合理性的检查
+    If ErrorFlag = True Then '如果没有错误继续执行
+    
+    d_c = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D56").Value
+    d_C2 = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D57").Value
+    
+    d_M = ThisWorkbook.Worksheets("Parameters").Range("D22").Value
+    d_LTCR = ThisWorkbook.Worksheets("Flushing Tech Results").Range("C9").Value
+    d_Mfvolume = ThisWorkbook.Worksheets("Parameters").Range("D26").Value
+    
+    
+    d_sd = ThisWorkbook.Worksheets("Parameters").Range("D23").Value
+    d_Zpr = ThisWorkbook.Worksheets("Parameters").Range("D24").Value
+    d_Gd = ThisWorkbook.Worksheets("Parameters").Range("D25").Value
+    d_C1 = ThisWorkbook.Worksheets("Parameters").Range("D18").Value
+    d_d = ThisWorkbook.Worksheets("Parameters").Range("D16").Value
+    
+            
+            'Worksheets("Parameters").Visible = True
+            Worksheets("Flushing Tech Calcs").Visible = True
+            Worksheets("HSRS Tech Cals").Visible = True
+            'Worksheets("Hide-HSRS Tech. Lookup Tables").Visible = True
+            
+            
+            Worksheets("Parameters").Visible = xlVeryHidden
+            'Worksheets("Flushing Tech Calcs").Visible = xlVeryHidden
+            'Worksheets("HSRS Tech Cals").Visible = xlVeryHidden
+            Worksheets("Hide-HSRS Tech. Lookup Tables").Visible = xlVeryHidden
+            
+        If (d_Se / d_M) < 5000 Then
+            
+            
+            Worksheets("Econ.Results&Conclusions").Visible = xlVeryHidden
+            Worksheets("Econ. Results & Conclusions").Visible = True
+            
+           ErrorFlag = F_NoRemoval_R   ' 计算净收益
+            If ErrorFlag = False Then
+            Exit Sub
+            End If
+            
+           ErrorFlag = F_NoRemoval_RR  ' 计算需要拆除收益
+            If ErrorFlag = False Then
+            Exit Sub
+            End If
+            
+           ErrorFlag = F_HSRS_TR      '超临界排沙系统
+            If ErrorFlag = False Then
+            Exit Sub
+            End If
+            
+            ErrorFlag = F_HSRS_PR_R  '超临界排沙系统的经济可行性
+            If ErrorFlag = False Then
+            Exit Sub
+            End If
+            
+            ErrorFlag = F_HSRS_PR_RR
+            If ErrorFlag = False Then
+            Exit Sub
+            End If
+            
+            ErrorFlag = F_Flushing
+            If ErrorFlag = False Then
+            Exit Sub
+            End If
+            
+            ErrorFlag = F_Dredging
+            If ErrorFlag = False Then
+            Exit Sub
+            End If
+            
+            ErrorFlag = F_Trucking
+            If ErrorFlag = False Then
+            Exit Sub
+            End If
+            
+            ErrorFlag = F_Safeguard
+            If ErrorFlag = False Then
+            Exit Sub
+            End If
+            
+            Worksheets("Flushing Tech Results").Activate
+            Range("B2").Activate
+        Else:
+            
+            Worksheets("Econ.Results&Conclusions").Visible = True
+            Worksheets("Econ.Results&Conclusions").Activate
+            Worksheets("Econ. Results & Conclusions").Visible = xlVeryHidden
+            
+        End If
+    
+    End If
+    End If
+    
+
+
+Exit Sub
+HandleErr:
+    MsgBox "Error#M occurred." & vbCrLf & "#" & Err.Number & ":" & Err.Description
+
+End Sub
+
+' 数据输入合理性检查
+Function F_Datacheck() As Boolean
+
+    F_Datacheck = True
+    
+    If d_S0 <= 0 Then
+    MsgBox "Check data. S0 must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    ElseIf (d_S0 - d_Se) / d_S0 > d_CLF / 100 Then
+        MsgBox "Check data. Exsting storage capacity is already less than CLF. Increase CLF.", vbOKOnly + vbExclamation, "Data Entry Error"
+        F_Datacheck = False
+    ElseIf (d_S0 - d_Se) / d_S0 > d_CLH / 100 Then
+        MsgBox "Check data. Exsting storage capacity is already less than CLH. Increase CLH.", vbOKOnly + vbExclamation, "Data Entry Error"
+        F_Datacheck = False
+    ElseIf (d_S0 - d_Se) / d_S0 > d_CLD / 100 Then
+        MsgBox "Check data. Exsting storage capacity is already less than CLD. Increase CLD.", vbOKOnly + vbExclamation, "Data Entry Error"
+        F_Datacheck = False
+    ElseIf (d_S0 - d_Se) / d_S0 > d_CLT / 100 Then
+        MsgBox "Check data. Exsting storage capacity is already less than CLT. Increase CLT.", vbOKOnly + vbExclamation, "Data Entry Error"
+        F_Datacheck = False
+    End If
+    
+    
+    If d_Se <= 0 Then
+    MsgBox "Check data. Se must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    ElseIf d_Se > d_S0 Then
+    MsgBox "Check data. Se must be smaller than S0", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_Wbot < 0 Then
+    MsgBox "Check data. Wbot must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_SSres < 0 Then
+    MsgBox "Check data. SSres must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    
+    If d_ELmax <= 0 Then
+    MsgBox "Check data. ELmax must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_ELmin < 0 Then
+    MsgBox "Check data. ELmin must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_ELf < 0 Then
+    MsgBox "Check data. ELf must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_L < 0 Then
+    MsgBox "Check data. L must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_HH <= 0 Then
+    MsgBox "Check data. h must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_MAR <= 0 Then
+    MsgBox "Check data. Vin must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_Cv <= 0 Then
+    MsgBox "Check data. Cv must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    'If d_Pr = 0.01 Or d_Pr = 0.02 Or d_Pr = 0.03 Or d_Pr = 0.04 Or d_Pr = 0.05 Then
+    'Else
+    'MsgBox "Check data. Pr must be 0.01, 0.02, 0.03, 0.04 or 0.05.", vbOKOnly + vbExclamation, "Data Entry Error"
+    'F_Datacheck = False
+    'End If
+    
+    If d_T < -10 Or d_T > 35 Then
+    MsgBox "Check data. T is out of reasonable range.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_pdpd <= 0 Then
+    MsgBox "Check data. CellD28 must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    
+    If d_Min <= 0 Then
+    MsgBox "Check data. Min must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_phi = 1600 Or d_phi = 650 Or d_phi = 300 Or d_phi = 180 Then
+    Else
+    MsgBox "Check data. CellD30 must be 1600, 650, 300 or 180.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_Brune = 1 Or d_Brune = 2 Or d_Brune = 3 Then
+    Else
+    MsgBox "Check data. Brune_Curve (CellD31) must be 1, 2 or 3.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_Ans = 3 Or d_Ans = 1 Then
+    Else
+    MsgBox "Check data. Ans must be 1 or 3.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_Type = 1 Or d_Type = 2 Then
+    Else
+    MsgBox "Check data. Type must be 1 or 2.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_H = 1 Or d_H = 2 Then
+    Else
+    MsgBox "Check data. HP must be 1 or 2.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_Of < 0 Then
+    MsgBox "Check data. Qf must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_Tf < 0 Then
+    MsgBox "Check data. Tf must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    
+    If i_N < 1 Then
+    MsgBox "Check data. N must not be less than 1.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    
+    If d_dd = 1 Or d_dd = 2 Or d_dd = 3 Or d_dd = 4 Then
+    Else
+    MsgBox "Check data. D must be 1,2,3 or 4.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_NP = 1 Or d_NP = 2 Or d_NP = 3 Then
+    Else
+    MsgBox "Check data. NP must be 1,2 or 3.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_YA > 1 Or d_YA < 0 Then
+    MsgBox "Check data. YA must be between 0 and 1.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_CLF < 1 Or d_CLF > 100 Then
+    MsgBox "Check data. CLF(%) must be between 1 and 100.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_CLH < 1 Or d_CLH > 100 Then
+    MsgBox "Check data. CLH(%) must be between 1 and 100.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_CLD < 1 Or d_CLD > 100 Then
+    MsgBox "Check data. CLD(%) must be between 1 and 100.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_CLT < 1 Or d_CLT > 100 Then
+    MsgBox "Check data. CLT(%) must be between 1 and 100.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_ASD < 1 Or d_ASD > 100 Then
+    MsgBox "Check data. ASD(%) must be between 1 and 100.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_AST < 1 Or d_AST > 100 Then
+    MsgBox "Check data. AST(%) must be between 1 and 100.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_Cw < 1 Or d_Cw > 100 Then
+    MsgBox "Check data. Cw(%) must be between 1 and 100.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_E = 0 Or d_E = 1 Then
+    Else
+    MsgBox "Check data. E must be 0 or 1.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_c < 0 Then
+    MsgBox "Check data. c must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_C2 < 0 Then
+    MsgBox "Check data. C2 must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If D_R < 0 Or D_R > 0.5 Then
+    MsgBox "Check data. r is out of reasonable range.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_P1 <= 0 Then
+    MsgBox "Check data. P1 must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    'd_a
+    
+    If d_omc <= 0 Then
+    MsgBox "Check data. omc must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_PH < 0 Then
+    MsgBox "Check data. PH must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_PD < 0 Then
+    MsgBox "Check data. PD must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+        
+    Dim d_ECD As Double
+    
+    d_ECD = Val(s_ECD)
+    
+    If s_ECD = "N/A" Or s_ECD = "n/a" Or d_ECD > 0 Then
+    Else
+    MsgBox "Check data on CD. Enter N/A or positive unit cost of dreding.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    
+    If d_CT < 0 Then
+    MsgBox "Check data. CT must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If (d_S0 / d_MAR) >= 0.0018 And d_S0 / d_MAR < 0.07 Then
+    ElseIf d_S0 / d_MAR >= 0.0018 And d_S0 / d_MAR < 0.5 Then
+    ElseIf d_S0 / d_MAR >= 0.0018 And d_S0 / d_MAR <= 10 Then
+    Else
+    MsgBox "Check data. The ratio of reservoir size (S0) to mean annual runoff (Vin) is out of reasonable range.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+
+    If IsError(Worksheets("Flushing Tech Results").Range("C9").Value) Or IsError(Worksheets("Flushing Tech Results").Range("D22").Value) Or IsError(Worksheets("Parameters").Range("B21").Value) Then
+        MsgBox "Check data. Data entered is out of reasonable range.", vbOKOnly + vbExclamation, "Data Entry Error"
+        F_Datacheck = False
+    End If
+
+    
+    Dim i_FD1_Max As Double
+    Dim d_Smin As Double
+        d_Smin = (1 - (d_CLD / 100)) * d_S0
+    
+    d_M = ThisWorkbook.Worksheets("Parameters").Range("D22").Value
+    i_FD1_Max = Application.WorksheetFunction.RoundDown(((d_S0 - d_Smin) / d_M), 0)
+    If i_FD1_Max <= 0 Then
+    MsgBox "Check data. Increase CLD.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    
+    d_Smin = (1 - (d_CLT / 100)) * d_S0
+    
+    d_M = ThisWorkbook.Worksheets("Parameters").Range("D22").Value
+    i_FD1_Max = Application.WorksheetFunction.RoundDown(((d_S0 - d_Smin) / d_M), 0)
+    If i_FD1_Max <= 0 Then
+    MsgBox "Check data. Increase CLT.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    
+    Dim d_s1 As Double
+    Dim d_s2 As Double
+    d_s1 = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D69").Value
+    d_s2 = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D70").Value
+    
+    If d_s1 > 1 Or d_s1 < 0 Then
+    MsgBox "Check data. s1 must be between 0 and 1.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_s2 > 1 Or d_s2 < 0 Then
+    MsgBox "Check data. s2 must be between 0 and 1.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_MD < 0 Then
+    MsgBox "Check data. MD must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_MT < 0 Then
+    MsgBox "Check data. MT must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_FI < 0 Then
+    MsgBox "Check data. FI must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    If d_HI < 0 Then
+    MsgBox "Check data. HI must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    If d_DU < 0 Then
+    MsgBox "Check data. DU must be positive.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+    d_LTCR = ThisWorkbook.Worksheets("Flushing Tech Results").Range("C9").Value
+    If 1 - d_LTCR > (d_CLF / 100) Then
+    MsgBox "Check data. CLF is too low to do flushing. Increase CLF.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Datacheck = False
+    End If
+    
+End Function
+
+'数据输入状态和合法性的检查
+Function F_Dataentry() As Boolean
+    
+    F_Dataentry = True
+    Dim Check1, Check2, Check3, Check4, Check5, Check6, Check7, Check8, Check9, Check10, Check11, Check12, Check13, Check14, Check15, Check16, Check17, Check18, Check19, Check20, Check21, Check22, Check23, Check24, Check25, Check26, Check27, Check28, Check29, Check30, Check31, Check32, Check33, Check34, Check35, Check36, Check37, Check38, Check39, Check40, Check41, Check42, Check43, Check44, Check45, Check46, Check47, Check48, Check49
+    Dim CheckN1, CheckN2, CheckN3, CheckN4, CheckN5, CheckN6, CheckN7, CheckN8, CheckN9, CheckN10, CheckN11, CheckN12, CheckN13, CheckN14, CheckN15, CheckN16, CheckN17, CheckN18, CheckN19, CheckN20, CheckN21, CheckN22, CheckN23, CheckN24, CheckN25, CheckN26, CheckN27, CheckN28, CheckN29, CheckN30, CheckN31, CheckN32, CheckN33, CheckN34, CheckN35, CheckN36, CheckN37, CheckN38, CheckN39, CheckN40, CheckN41, CheckN42, CheckN43, CheckN44, CheckN45, CheckN46, CheckN47, CheckN48, CheckN49
+    
+    Check1 = IsEmpty(d_S0)
+    Check2 = IsEmpty(d_Se)
+    Check3 = IsEmpty(d_Wbot)
+    Check4 = IsEmpty(d_SSres)
+    Check5 = IsEmpty(d_ELmax)
+    Check6 = IsEmpty(d_ELmin)
+    Check7 = IsEmpty(d_ELf)
+    Check8 = IsEmpty(d_L)
+    Check9 = IsEmpty(d_HH)
+    
+    Check10 = IsEmpty(d_MAR)
+    Check11 = IsEmpty(d_Cv)
+    Check12 = IsEmpty(d_T)
+    
+    Check13 = IsEmpty(d_pdpd)
+    Check14 = IsEmpty(d_Min)
+    Check15 = IsEmpty(d_phi)
+    Check16 = IsEmpty(d_Brune)
+    Check17 = IsEmpty(d_Ans)
+    Check18 = IsEmpty(d_Type)
+    
+    Check19 = IsEmpty(d_H)
+    Check20 = IsEmpty(d_Of)
+    Check21 = IsEmpty(d_Tf)
+    Check22 = IsEmpty(i_N)
+    Check23 = IsEmpty(d_dd)
+    Check24 = IsEmpty(d_NP)
+    Check25 = IsEmpty(d_YA)
+    Check26 = IsEmpty(d_CLF)
+    Check27 = IsEmpty(d_CLH)
+    Check28 = IsEmpty(d_CLD)
+    Check29 = IsEmpty(d_CLT)
+    Check30 = IsEmpty(d_ASD)
+    Check31 = IsEmpty(d_AST)
+    Check32 = IsEmpty(d_MD)
+    Check33 = IsEmpty(d_MT)
+    Check34 = IsEmpty(d_Cw)
+    
+    Check35 = IsEmpty(d_E)
+    
+    
+    Check36 = IsEmpty(D_R)
+    Check37 = IsEmpty(D_MR)
+    Check38 = IsEmpty(d_P1)
+    Check39 = IsEmpty(d_DC)
+    Check40 = IsEmpty(d_omc)
+    Check41 = IsEmpty(d_PH)
+    Check42 = IsEmpty(d_PD)
+    Check43 = IsEmpty(d_CD)
+    Check44 = IsEmpty(d_CT)
+    
+    Check45 = IsEmpty(d_FI)
+    Check46 = IsEmpty(d_HI)
+    Check47 = IsEmpty(d_DU)
+    
+    Check48 = IsNull(d_s1)
+    Check49 = IsEmpty(d_s2)
+      
+    CheckN1 = IsNumeric(d_S0)
+    CheckN2 = IsNumeric(d_Se)
+    CheckN3 = IsNumeric(d_Wbot)
+    CheckN4 = IsNumeric(d_SSres)
+    CheckN5 = IsNumeric(d_ELmax)
+    CheckN6 = IsNumeric(d_ELmin)
+    CheckN7 = IsNumeric(d_ELf)
+    CheckN8 = IsNumeric(d_L)
+    CheckN9 = IsNumeric(d_HH)
+    
+    CheckN10 = IsNumeric(d_MAR)
+    CheckN11 = IsNumeric(d_Cv)
+    CheckN12 = IsNumeric(d_T)
+    
+    CheckN13 = IsNumeric(d_pdpd)
+    CheckN14 = IsNumeric(d_Min)
+    CheckN15 = IsNumeric(d_phi)
+    CheckN16 = IsNumeric(d_Brune)
+    CheckN17 = IsNumeric(d_Ans)
+    CheckN18 = IsNumeric(d_Type)
+    
+    CheckN19 = IsNumeric(d_H)
+    CheckN20 = IsNumeric(d_Of)
+    CheckN21 = IsNumeric(d_Tf)
+    CheckN22 = IsNumeric(i_N)
+    CheckN23 = IsNumeric(d_dd)
+    CheckN24 = IsNumeric(d_NP)
+    CheckN25 = IsNumeric(d_YA)
+    CheckN26 = IsNumeric(d_CLF)
+    CheckN27 = IsNumeric(d_CLH)
+    CheckN28 = IsNumeric(d_CLD)
+    CheckN29 = IsNumeric(d_CLT)
+    CheckN30 = IsNumeric(d_ASD)
+    CheckN31 = IsNumeric(d_AST)
+    CheckN32 = IsNumeric(d_MD)
+    CheckN33 = IsNumeric(d_MT)
+    CheckN34 = IsNumeric(d_Cw)
+    
+    CheckN35 = IsNumeric(d_E)
+    
+    
+    CheckN36 = IsNumeric(D_R)
+    CheckN37 = IsNumeric(D_MR)
+    CheckN38 = IsNumeric(d_P1)
+    CheckN39 = IsNumeric(d_DC)
+    CheckN40 = IsNumeric(d_omc)
+    CheckN41 = IsNumeric(d_PH)
+    CheckN42 = IsNumeric(d_PD)
+    
+    CheckN44 = IsNumeric(d_CT)
+    
+    CheckN45 = IsNumeric(d_FI)
+    CheckN46 = IsNumeric(d_HI)
+    CheckN47 = IsNumeric(d_DU)
+    
+    CheckN48 = IsNumeric(d_s1)
+    CheckN49 = IsNumeric(d_s2)
+    
+    If Check1 = True Or Check2 = True Or Check3 = True Or Check4 = True Or Check5 = True Or Check6 = True Or Check7 = True Or Check8 = True Or Check9 = True Or Check10 = True Or Check11 = True Or Check12 = True Or Check13 = True Or Check14 = True Or Check15 = True Or Check16 = True Or Check17 = True Or Check18 = True Or Check19 = True Or Check20 = True Or Check21 = True Or Check22 = True Or Check23 = True Or Check24 = True Or Check25 = True Or Check26 = True Or Check27 = True Or Check28 = True Or Check29 = True Or Check30 = True Or Check31 = True Or Check32 = True Or Check33 = True Or Check34 = True Or Check35 = True Or Check36 = True Or Check37 = True Or Check38 = True Or Check39 = True Or Check40 = True Or Check41 = True Or Check42 = True Or Check43 = True Or Check44 = True Or Check45 = True Or Check46 = True Or Check47 = True Or Check48 = True Or Check49 = True Then
+    MsgBox "Please make sure that all data is provided in the table below.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Dataentry = False
+    ElseIf CheckN1 = False Or CheckN2 = False Or CheckN3 = False Or CheckN4 = False Or CheckN5 = False Or CheckN6 = False Or CheckN7 = False Or CheckN8 = False Or CheckN9 = False Or CheckN10 = False Or CheckN11 = False Or CheckN12 = False Or CheckN13 = False Or CheckN14 = False Or CheckN15 = False Or CheckN16 = False Or CheckN17 = False Or CheckN18 = False Or CheckN19 = False Or CheckN20 = False Or CheckN21 = False Or CheckN22 = False Or CheckN23 = False Or CheckN24 = False Or CheckN25 = False Or CheckN26 = False Or CheckN27 = False Or CheckN28 = False Or CheckN29 = False Or CheckN30 = False Or CheckN31 = False Or CheckN32 = False Or CheckN33 = False Or CheckN34 = False Or CheckN35 = False Or CheckN36 = False Or CheckN37 = False Or CheckN38 = False Or CheckN39 = False Or CheckN40 = False Or CheckN41 = False Or CheckN42 = False Or CheckN44 = False Or CheckN45 = False Or CheckN46 = False Or CheckN47 = False Then  'Or CheckN48 = False Or CheckN49 = False Then
+    MsgBox "Please make sure that all data you provided is valid. Only numerical value should be entered.", vbOKOnly + vbExclamation, "Data Entry Error"
+    F_Dataentry = False
+    End If
+
+
+    
+End Function
+
+Function F_Flushing() As Boolean
+    On Error GoTo HandleErr
+    F_Flushing = True
+    
+    Dim d_Ws0 As Double
+        
+    If d_H = 2 Then
+    d_Ws0 = 0
+    Else
+    d_Ws0 = (-(d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_Gd * d_sd ^ 2 / d_MAR))
+    End If
+    
+    Dim d_WLTCR As Double
+    d_WLTCR = (4 * ((d_S0 * d_LTCR - d_M) * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * ((d_S0 * d_LTCR - d_M) + d_Gd * d_sd ^ 2 / d_MAR))
+   
+   
+    
+
+        
+    Dim d_S As Double
+    If d_E = 0 Then
+    d_S = d_Se
+    
+    Else
+    d_S = d_S0 - d_M
+    End If
+    
+    Dim d_Smin As Double
+    
+    d_Smin = Application.WorksheetFunction.Max(d_S0 * d_LTCR - d_Mfvolume, (1 - (d_CLF / 100)) * d_S0)
+    
+    
+    Dim i_Year_Maxmim As Double
+    i_Year_Maxmim = Application.WorksheetFunction.RoundDown(((d_LTCR * d_S0 - d_Smin) / d_M), 1) 'change made 06/05/03
+    'Technical feasibility checked'
+
+Dim d_technicalfeasibility As Double
+d_technicalfeasibility = ThisWorkbook.Worksheets("Flushing Tech Results").Range("E8").Value
+
+If d_Se < d_Smin Then
+ThisWorkbook.Worksheets("Econ. Results & Conclusions").Activate
+    Range("D9").Value = "The calculated LTCR (see Flushing Tech Results) cannot be achieved due to excessive loss of original storage"
+    Range("E72").Value = "N/A"
+    Range("E62").Value = "N/A"
+    Range("E71").Value = "N/A"
+    Range("E57").Value = "N/A"
+    Range("E85").Value = "N/A"
+    Range("E84").Value = "N/A"
+    Range("C98").Value = "N/A"
+    Range("C99").Value = "N/A"
+    Range("D98").Value = "N/A"
+    Range("E50").Value = "N/A"
+Else
+
+If d_technicalfeasibility = 1 Then
+
+    'variables used for each stage
+    Dim d_St As Double
+    Dim d_Wt As Double
+    Dim i_Year As Double
+
+    '***************************
+    'Sustainable Stage
+    '
+    '
+    'Variables named with 's' stand for Sustainable stage
+
+    Dim d_sNPVt As Double
+    Dim d_sNPVt_A As Double
+    Dim d_sNPVt_F As Double
+    Dim d_sNPV_Sum As Double
+    Dim d_sNPV_Sum_InfD As Double
+    Dim d_sNPV_Sum_InfD_Max As Double
+    Dim i_Year_Max As Double
+    Dim MyData1() As Variant
+    Dim d_sNPV_Sum_InfD_Max_D As Double
+    Dim d_TotalNPV As Double
+   
+    'Initialize variables for sustainable stage
+    
+    d_St = d_LTCR * d_S0 - d_M
+    d_sNPVt_A = 0
+    i_Year = 1
+    i_Year_Max = 1
+    
+    ReDim MyData1(i_Year_Maxmim + 1, 8)
+    '
+    'calculate NPVt for sustainable stage
+
+    Do Until (d_St < d_Smin)
+        
+        d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+        d_sNPVt = (d_d ^ i_Year) * (d_P1 * d_Wt - d_C1)
+        d_sNPVt_F = d_s1 * ((d_d ^ i_Year) * (d_P1 * d_Ws0)) + d_s2 * ((d_d ^ i_Year) * (d_P1 * (d_WLTCR - d_Ws0))) - (d_d ^ i_Year) * d_C1
+
+        If i_Year = 1 Then
+        MyData1(i_Year, 5) = d_sNPVt_A
+        d_sNPV_Sum = d_sNPVt_F
+        d_sNPV_Sum_InfD = d_sNPV_Sum / (1 - d_d ^ i_Year)
+        d_sNPV_Sum_InfD_Max = d_sNPV_Sum_InfD
+        d_sNPVt_A = d_sNPVt
+        Else
+                        
+        d_sNPV_Sum = d_sNPVt_F + d_sNPVt_A
+        d_sNPV_Sum_InfD = d_sNPV_Sum / (1 - d_d ^ i_Year)
+            
+        MyData1(i_Year, 5) = d_sNPVt_A
+        d_sNPVt_A = d_sNPVt_A + d_sNPVt
+            
+            If d_sNPV_Sum_InfD_Max < d_sNPV_Sum_InfD Then   'Check d_sNPV_Sum_InfD for Max
+            d_sNPV_Sum_InfD_Max = d_sNPV_Sum_InfD
+            i_Year_Max = i_Year
+            Else
+            End If
+                
+        End If
+        
+        MyData1(i_Year, 1) = i_Year
+        'Debug.Print "d_St="; d_St
+        MyData1(i_Year, 2) = d_St
+        MyData1(i_Year, 3) = d_Wt
+        MyData1(i_Year, 4) = d_sNPVt
+        MyData1(i_Year, 6) = d_sNPVt_F
+        MyData1(i_Year, 7) = d_sNPV_Sum
+        MyData1(i_Year, 8) = d_sNPV_Sum_InfD
+        
+        d_St = d_St - d_M
+        i_Year = i_Year + 1
+    Loop
+    
+    'd_St = d_Smin
+    'd_Wt = d_Ws0
+    'd_sNPVt = (d_d ^ i_Year) * (d_P1 * d_Wt - d_C1)
+    'd_sNPVt_F = d_s1 * ((d_d ^ i_Year) * (d_P1 * d_Ws0 - d_C1)) + d_s2 * ((d_d ^ i_Year) * (d_P1 * (d_WLTCR - d_Ws0) - d_C1))
+    'd_sNPVt_A = d_sNPVt_A + d_sNPVt
+    'd_sNPV_Sum = d_sNPVt_F + d_sNPVt_A
+    'd_sNPV_Sum_InfD = d_sNPV_Sum / (1 - d_d ^ i_Year)
+    
+    'If d_sNPV_Sum_InfD_Max < d_sNPV_Sum_InfD Then   'Check d_sNPV_Sum_InfD for Max
+    'd_sNPV_Sum_InfD_Max = d_sNPV_Sum_InfD
+    'i_Year_Max = i_Year
+    'End If
+    
+    MyData1(i_Year, 1) = i_Year
+    MyData1(i_Year, 2) = d_St
+    MyData1(i_Year, 3) = d_Wt
+    MyData1(i_Year, 4) = d_sNPVt
+    MyData1(i_Year, 6) = d_sNPVt_F
+    MyData1(i_Year, 7) = d_sNPV_Sum
+    MyData1(i_Year, 8) = d_sNPV_Sum_InfD
+    
+    'Non-Sustainable Stage-----------------------------------------------
+    '
+    If d_Se > d_LTCR * d_S0 Then
+        
+        'Variables named with 'ns' stand for Non-Sustainable stage
+        Dim d_nsNPVt As Double
+        Dim d_nsNPVt_Sum As Double
+        Dim i_Cycle As Double
+        Dim i_Flushing As Double
+        Dim i_Cycle_Max As Double
+        Dim i_flag As Double         'the case of converge = True , the case of reaching to LTCR = False
+        Dim d_Sb As Double            'remaining reservoir capacity before Flushing
+        Dim i_CntEfctCycle As Double 'counting # of cycles reaching LTCR
+        
+        Dim d_AX_Opt
+        '
+        'Variables for optimal result
+        Dim i_Cycle_Opt As Double
+        Dim d_nsNPVt_Sum_Opt As Double
+        Dim d_sNPV_Sum_InfD_Max_D_Opt As Double
+        Dim d_TotalNPV_Opt As Double
+        Dim i_Year_Opt As Double
+        '
+        'initialize variables
+        i_Year = 0
+        i_Cycle_Max = 1 + Application.WorksheetFunction.RoundUp(((d_S - d_LTCR * d_S0) / d_M), 0)
+        i_Cycle = 1
+        i_CntEfctCycle = 0
+        
+        Do While i_Cycle <= i_Cycle_Max
+            
+            i_Flushing = 0
+            i_Year = 1
+            i_flag = False
+            
+            d_St = d_S
+            d_nsNPVt_Sum = 0
+            
+            Do Until (d_St <= d_LTCR * d_S0 Or i_flag = True)
+                If i_Year = (i_Flushing + 1) * i_Cycle Then
+                d_Sb = d_St     'remaining reservoir capacity before Flushing
+                Dim d_X As Double
+                Dim d_AX As Double
+                d_X = Application.WorksheetFunction.Min(d_Mfvolume, d_LTCR * (d_S0 - d_St))
+                d_AX = d_AX + d_X
+                
+                d_St = d_St - d_M + Application.WorksheetFunction.Min(d_Mfvolume, d_LTCR * (d_S0 - d_St))
+                
+                d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+                d_Wt = d_s1 * d_Ws0 + d_s2 * (d_Wt - d_Ws0)
+                    
+                    If (i_Cycle - 1) * d_M - (d_St - d_Sb) < 1 Then ' case of converge(i_Cycle - 1) * d_M - (d_St - d_Sb) < 1
+                    i_flag = True
+                    End If
+                    
+                i_Flushing = i_Flushing + 1
+                Else
+                d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+                d_St = d_St - d_M
+                End If
+                
+                Dim d_FI_paid As Double
+                
+                
+                If i_Flushing = 1 And d_FI_paid = 0 Then
+                d_nsNPVt = (d_d ^ i_Year) * (d_P1 * d_Wt - d_C1 - d_FI)
+                d_FI_paid = 1
+                
+                Else
+                d_nsNPVt = (d_d ^ i_Year) * (d_P1 * d_Wt - d_C1)
+                End If
+                
+                
+                d_nsNPVt_Sum = d_nsNPVt_Sum + d_nsNPVt
+                
+                        
+                i_Year = i_Year + 1
+                
+            Loop
+            
+            If i_flag = False Then
+                i_CntEfctCycle = i_CntEfctCycle + 1
+                d_St = d_LTCR * d_S0
+                d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+                
+                If d_FI_paid = 0 Then
+                d_nsNPVt = (d_d ^ i_Year) * (d_P1 * d_Wt - d_C1 - d_FI)
+                Else
+                d_nsNPVt = (d_d ^ i_Year) * (d_P1 * d_Wt - d_C1)
+                End If
+                
+                d_nsNPVt_Sum = d_nsNPVt_Sum + d_nsNPVt
+                d_sNPV_Sum_InfD_Max_D = d_d ^ (i_Year) * d_sNPV_Sum_InfD_Max
+                d_TotalNPV = d_nsNPVt_Sum + d_sNPV_Sum_InfD_Max_D - d_C2
+                 
+                If i_CntEfctCycle = 1 Then 'the cycle that did  converge =1
+                d_TotalNPV_Opt = d_TotalNPV
+                i_Cycle_Opt = i_Cycle
+                d_nsNPVt_Sum_Opt = d_nsNPVt_Sum
+                d_sNPV_Sum_InfD_Max_D_Opt = d_sNPV_Sum_InfD_Max_D
+                i_Year_Opt = i_Year
+                
+                d_AX_Opt = d_AX '''''''''change
+                Else
+                
+                    If d_TotalNPV > d_TotalNPV_Opt Then
+                    d_TotalNPV_Opt = d_TotalNPV
+                    i_Cycle_Opt = i_Cycle
+                    d_nsNPVt_Sum_Opt = d_nsNPVt_Sum
+                    d_sNPV_Sum_InfD_Max_D_Opt = d_sNPV_Sum_InfD_Max_D
+                    i_Year_Opt = i_Year
+                    
+                    d_AX_Opt = d_AX '''''''''change
+                
+                    End If
+                    
+                End If
+            
+            Else    ' Output for the case of converge
+              
+            End If
+            d_AX = 0
+            d_X = 0
+            i_Cycle = i_Cycle + 1
+            d_FI_paid = 0
+        Loop
+        
+         
+        'Report Result on  "Econ. Results & Conclusions"Sheet
+        ThisWorkbook.Worksheets("Econ. Results & Conclusions").Activate
+        Range("E72").Value = i_Year_Max '+ 1
+        Range("E62").Value = Application.WorksheetFunction.RoundDown((i_Year_Opt + 1) / (i_Cycle_Opt + 1), 0)
+        
+        
+        If Range("E62").Value <= 1 Then
+            Range("E71").Value = "No Flushing occurs"
+            Range("E62").Value = 0
+            Range("C98").Value = "N/A"
+            Range("E84").Value = 0
+        
+        Else
+            Range("E71").Value = i_Cycle_Opt
+            Range("C98").Value = "Varies"
+            Range("E84").Value = d_AX_Opt / Application.WorksheetFunction.RoundDown((i_Year_Opt + 1) / (i_Cycle_Opt + 1), 0)
+        
+        End If
+        
+        Range("E85").Value = i_Year_Max * d_M
+        Range("D9").Value = d_TotalNPV_Opt
+        Range("E57").Value = i_Year_Opt
+        Range("C99").Value = (i_Year_Max * d_M) / (d_S0 * ((Application.WorksheetFunction.Min(100 * (1 - (d_LTCR * d_S0 - i_Year_Max * d_M) / d_S0), 100) / 100) / 100))
+        Range("D98").Value = Application.WorksheetFunction.Min(100 * (1 - (d_LTCR * d_S0 - i_Year_Max * d_M) / d_S0), 100)
+        Range("E50").Value = d_LTCR * d_S0
+    
+    '''''''''''''the case Se < LTCR*So'''''''''''''''''''''''''''''''''
+    '
+    Else
+        d_St = d_Se
+        i_Year = 1
+        d_sNPVt_A = 0
+        
+        Do Until (d_St <= d_Smin)
+        
+            d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+            
+            If i_Year = 1 Then
+            d_sNPVt = (d_d ^ i_Year) * (d_P1 * d_Wt - d_C1 - d_FI)
+            Else
+            d_sNPVt = (d_d ^ i_Year) * (d_P1 * d_Wt - d_C1)
+            End If
+            
+            d_sNPVt_A = d_sNPVt_A + d_sNPVt
+            
+            d_St = d_St - d_M
+            i_Year = i_Year + 1
+            
+            d_sNPVt_F = d_s1 * ((d_d ^ i_Year) * (d_P1 * d_Ws0)) + d_s2 * ((d_d ^ i_Year) * (d_P1 * (d_WLTCR - d_Ws0))) - (d_d ^ i_Year) * (d_C1)
+            
+            d_TotalNPV = d_sNPVt_A + d_sNPVt_F + d_d ^ (i_Year + 1) * d_sNPV_Sum_InfD_Max
+            
+            If i_Year = 2 Then
+            d_TotalNPV_Opt = d_TotalNPV
+            ElseIf d_TotalNPV > d_TotalNPV_Opt Then
+            d_TotalNPV_Opt = d_TotalNPV
+            End If
+            
+        Loop
+        'd_St = d_Smin
+        'd_sNPVt = d_s1 * ((d_d ^ i_Year) * (d_P1 * d_Ws0)) + d_s2 * ((d_d ^ i_Year) * (d_P1 * (d_WLTCR - d_Ws0))) - (d_d ^ i_Year) * d_C1 - d_FI
+        'd_sNPVt_A = d_sNPVt_A + d_sNPVt
+        
+        'd_sNPV_Sum_InfD_Max_D = d_d ^ (i_Year) * d_sNPV_Sum_InfD_Max
+        'Dim d_TotalNPV_Last As Double
+        'd_TotalNPV_Last = d_sNPVt_A + d_sNPV_Sum_InfD_Max_D - d_C2
+        'Dim i_Year_Last As Double
+        'i_Year_Last = i_Year
+        '''''''''''''''''''''
+        d_St = d_Se
+        i_Year = 1
+        d_sNPVt = d_s1 * ((d_d ^ i_Year) * (d_P1 * d_Ws0)) + d_s2 * ((d_d ^ i_Year) * (d_P1 * (d_WLTCR - d_Ws0))) - (d_d ^ i_Year) * (d_C1 + d_FI)
+        i_Year = i_Year + 1
+        d_sNPV_Sum_InfD_Max_D = d_d ^ (i_Year) * d_sNPV_Sum_InfD_Max
+        Dim d_TotalNPV_First As Double
+        d_TotalNPV_First = d_sNPVt + d_sNPV_Sum_InfD_Max_D - d_C2
+        
+        If d_TotalNPV_First > d_TotalNPV Then
+        d_TotalNPV = d_TotalNPV_First
+        Else
+        d_TotalNPV = d_TotalNPV
+        End If
+        
+        
+    'Report Result on "Econ. Results & Conclusions" Sheet
+        ThisWorkbook.Worksheets("Econ. Results & Conclusions").Activate
+        Range("E72").Value = i_Year_Max '+ 1
+        Range("E62").Value = 1
+        Range("E71").Value = "No Flushing occurs"
+        Range("D9").Value = d_TotalNPV
+        Range("E57").Value = 1
+        Range("E85").Value = i_Year_Max * d_M
+        Range("C98").Value = 0
+        Range("C99").Value = (i_Year_Max * d_M) * 100 / ((d_S0 / 100) * Application.WorksheetFunction.Min(100 * (1 - (d_LTCR * d_S0 - i_Year_Max * d_M) / d_S0), 100))
+        
+        
+        Range("D98").Value = Application.WorksheetFunction.Min(100 * (1 - (d_LTCR * d_S0 - i_Year_Max * d_M) / d_S0), 100)
+        Range("E50").Value = d_LTCR * d_S0
+        Range("E84").Value = 0
+      End If
+     
+Else
+    ThisWorkbook.Worksheets("Econ. Results & Conclusions").Activate
+    Range("D9").Value = "Flushing is techinically infeasible"
+    Range("E72").Value = "Flushing is techinically infeasible"
+    Range("E62").Value = "Flushing is techinically infeasible"
+    Range("E71").Value = "Flushing is techinically infeasible"
+    Range("E57").Value = "Flushing is techinically infeasible"
+    Range("E85").Value = "Flushing is techinically infeasible"
+    Range("E84").Value = "Flushing is techinically infeasible"
+    Range("C98").Value = "N/A"
+    Range("C99").Value = "N/A"
+    Range("D98").Value = "N/A"
+    Range("E50").Value = "N/A"
+End If
+End If
+Exit Function
+HandleErr:
+    MsgBox "Error#F occurred." & vbCrLf & "#" & Err.Number & ":" & Err.Description
+    F_Flushing = False
+
+End Function
+
+'计算疏浚的成本
+Function F_Dredging() As Boolean
+    On Error GoTo HandleErr
+    F_Dredging = True
+
+'Calculate NPV for Dredging
+'
+    Dim d_Ws0 As Double
+    If d_H = 2 Then
+    d_Ws0 = 0
+    Else
+    d_Ws0 = (-(d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_Gd * d_sd ^ 2 / d_MAR))
+    End If
+        
+    Dim d_S As Double
+    If d_E = 0 Then
+    
+    Else
+    d_S = d_S0
+    End If
+      
+    Dim d_Smin As Double
+    d_Smin = (1 - (d_CLD / 100)) * d_S0
+
+    
+    Dim d_St As Double
+    Dim d_Wt As Double
+    
+    Dim MyData1() As Variant
+    Dim i_FD1_Max As Double
+    i_FD1_Max = Application.WorksheetFunction.RoundDown(((d_S0 - d_Smin) / d_M), 0)
+       
+    ReDim MyData1(i_FD1_Max, 8)
+    
+    Dim i_FD1 As Double
+    i_FD1 = 1
+    Dim d_fsNPVt As Double
+    Dim d_fsNPVt_A As Double
+    d_fsNPVt_A = 0
+    '@Dim i_StartRow As Double
+    
+    d_St = d_S0 - d_M
+    
+    Do While i_FD1 <= i_FD1_Max
+        '
+        'First Stage NPVt
+        
+        d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+        d_fsNPVt = (d_d ^ i_FD1) * (d_P1 * d_Wt - d_C1)
+        d_fsNPVt_A = d_fsNPVt_A + d_fsNPVt
+       
+        MyData1(i_FD1, 3) = d_Wt
+        
+           '
+            'Second Stage MaxCycle
+            
+            Dim MyData2() As Variant
+            Dim d_smin_FD1 As Double
+            d_smin_FD1 = d_St
+            Dim d_Smax As Double
+            d_Smax = d_smin_FD1 + ((d_S0 - d_St) * d_ASD / 100) - d_M
+            Dim i_FD2_Max As Double
+            i_FD2_Max = Application.WorksheetFunction.RoundDown(((d_Smax - d_smin_FD1) / d_M) + 1, 0)
+            
+ 
+            
+            Dim i_FD2 As Double
+            i_FD2 = 1
+          
+            Do While i_FD2 <= i_FD2_Max 'And i_FD2_Max >= 1
+            
+                '
+                'Second Stage NPVt
+                ReDim MyData2(i_FD2_Max, 5) As Variant
+                Dim i_MyRow As Double
+                i_MyRow = 1
+                MyData2(i_MyRow, 1) = 1
+                
+                Dim d_Supr As Double
+                
+                d_Supr = d_smin_FD1 + (i_FD2 - 1) * d_M
+                MyData2(i_MyRow, 2) = d_Supr
+                
+                d_Wt = (4 * (d_Supr * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_Supr + d_Gd * d_sd ^ 2 / d_MAR))
+                MyData2(i_MyRow, 3) = d_Wt
+                
+                Dim d_ssNPVt As Double
+                d_CD = F_DredgingCost(d_M, i_FD2, s_ECD)
+                d_ssNPVt = (d_d ^ (i_FD1 + 1)) * (d_P1 * d_Wt - (d_P1 - d_PD) * ((100 * 2.65) / d_Cw) * (i_FD2 * d_M) - d_C1 - d_CD * (d_M * i_FD2))
+                MyData2(i_MyRow, 4) = d_ssNPVt
+                
+                Dim d_ssNPVt_A As Double
+                d_ssNPVt_A = d_ssNPVt
+                MyData2(i_MyRow, 5) = d_ssNPVt_A
+                
+                d_Supr = (d_Supr - d_M)
+                
+                Dim i_cnt_dis As Double
+                i_cnt_dis = 1
+                
+                Do While 1 < i_FD2 And i_cnt_dis < i_FD2 '''COUNTER for d_FD2_ssNPV_Opt
+
+                    i_MyRow = i_MyRow + 1
+                    MyData2(i_MyRow, 1) = i_MyRow
+                    MyData2(i_MyRow, 2) = d_Supr
+                    
+                    d_Wt = (4 * (d_Supr * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_Supr + d_Gd * d_sd ^ 2 / d_MAR))
+                    MyData2(i_MyRow, 3) = d_Wt
+                    
+                    d_ssNPVt = (d_d ^ (i_FD1 + 1 + i_cnt_dis)) * (d_P1 * d_Wt - d_C1) ''''''change discount factors here
+                                       
+                    MyData2(i_MyRow, 4) = d_ssNPVt
+                    
+                    d_ssNPVt_A = d_ssNPVt_A + d_ssNPVt
+                    MyData2(i_MyRow, 5) = d_ssNPVt_A
+                    d_Supr = d_Supr - d_M
+                    i_cnt_dis = i_cnt_dis + 1
+                    
+                Loop
+                        
+                Dim d_ssNPV_Inf As Double
+                    d_ssNPV_Inf = d_ssNPVt_A / (1 - (d_d ^ (i_FD2)))
+                    
+                'Debug.Print "ssNPV="; d_ssNPV_Inf
+                'Secound Stage Output
+                
+                Dim i_FD2_Opt As Double
+                Dim d_FD2_ssNPV_Opt As Double
+                If i_FD2 = 1 Then
+                i_FD2_Opt = i_FD2
+                d_FD2_ssNPV_Opt = d_ssNPV_Inf
+                End If
+                If d_ssNPV_Inf > d_FD2_ssNPV_Opt Then
+                        d_FD2_ssNPV_Opt = d_ssNPV_Inf
+                        i_FD2_Opt = i_FD2
+                End If
+                
+                i_FD2 = i_FD2 + 1
+                    
+            Loop
+                       
+            'If i_FD2_Max >= 1 Then
+             '   Keep Maximum Total NPV
+                Dim d_Total_NPV_Opt As Double
+                Dim i_FD1_Opt As Double
+                Dim i_FD2_Max_Opt As Double
+                Dim d_Smin_Opt As Double '''For existing dams
+                Dim d_Smax_Opt As Double '''For existing dams
+                
+                Dim i_first As Double
+            
+                If i_FD1 >= 1 And i_FD2_Opt >= 1 And i_first <> 1 Then ''' change made
+                    Dim d_Total_NPV As Double
+                    d_Total_NPV = d_fsNPVt_A + (d_FD2_ssNPV_Opt) - d_C2
+                    d_Total_NPV_Opt = d_Total_NPV
+                    i_FD1_Opt = i_FD1
+                    i_FD2_Max_Opt = i_FD2_Opt
+                    d_Smin_Opt = d_St
+                    d_Smax_Opt = d_St + (d_M * (i_FD2_Opt - 1))
+                      
+                    i_first = 1
+                End If
+              
+            
+                
+              
+              
+              If i_FD1 >= 1 And i_FD2_Opt >= 1 And i_first = 1 Then
+                    
+                    d_Total_NPV = d_fsNPVt_A + (d_FD2_ssNPV_Opt) - d_C2
+                    If d_Total_NPV > d_Total_NPV_Opt Then
+                      d_Total_NPV_Opt = d_Total_NPV
+                      i_FD1_Opt = i_FD1
+                      i_FD2_Max_Opt = i_FD2_Opt
+                      d_Smin_Opt = d_St
+                      d_Smax_Opt = d_St + (d_M * (i_FD2_Opt - 1))
+                    End If
+              End If
+              
+              'Debug.Print "FD1="; i_FD1_Opt
+              'Debug.Print "FD2="; i_FD2_Max_Opt
+              'Debug.Print "NPV="; d_Total_NPV_Opt
+              'table
+              MyData1(i_FD1, 1) = i_FD1
+              MyData1(i_FD1, 2) = d_St
+              MyData1(i_FD1, 4) = d_fsNPVt
+              MyData1(i_FD1, 5) = d_fsNPVt_A
+              MyData1(i_FD1, 6) = i_FD2_Opt
+              MyData1(i_FD1, 7) = d_FD2_ssNPV_Opt
+              MyData1(i_FD1, 8) = d_Total_NPV
+            'End If
+            
+        i_FD1 = i_FD1 + 1
+        d_St = d_St - d_M
+    Loop
+    '
+
+    
+    If i_FD1_Opt < 1 Then
+    TFinf_Dredging
+    Exit Function
+    End If
+    
+    If i_FD2_Max_Opt < 1 Then
+    TFinf_Dredging
+    Exit Function
+    End If
+    
+    Worksheets("Econ. Results & Conclusions").Activate
+    Range("D11").Value = d_Total_NPV_Opt
+    Range("E52").Value = d_Smax_Opt
+    
+    Range("E59").Value = i_FD1_Opt
+    Range("E74").Value = i_FD1_Opt
+    Range("E75").Value = i_FD2_Max_Opt
+    Range("E87").Value = "N/A"
+    Range("E88").Value = i_FD2_Max_Opt * d_M
+    Range("C101").Value = "N/A"
+    Range("C102").Value = (i_FD2_Max_Opt * d_M) * 100 / (d_S0 - d_Smin_Opt)
+    Range("D101").Value = (d_S0 - d_Smin_Opt) * 100 / d_S0
+    
+    If i_FD2_Max_Opt * d_M >= d_MD Then
+    Range("B129:E129").Select
+    With Selection.Interior
+        .ColorIndex = 6
+        .Pattern = xlSolid
+    End With
+    Range("B129").Value = "The physical maximum limit for removal of sediment with dredging, MD, specified in the User Input page, is being exceeded. Decrease ASD or increase MD."
+    Else
+    Range("B129:E129").Select
+    Selection.Interior.ColorIndex = xlNone
+    Range("B129").Value = ""
+    End If
+    
+    
+'For the case of existing dam
+'
+    If d_E = 0 Then
+
+        Dim d_Sea As Double '''adjusted Se
+        d_Sea = d_S0 - d_M * Application.WorksheetFunction.Round((d_S0 - d_Se) / d_M, 0)
+        Dim i_Cnt_e As Double
+        i_Cnt_e = 1
+        Dim d_efsNPVt As Double
+        Dim d_efsNPVt_A As Double
+        d_efsNPVt_A = 0
+        Dim d_essNPVt As Double
+        Dim d_essNPVt_A As Double
+        d_essNPVt_A = 0
+     
+        
+        '---------------------------------case1 --------------------'
+        
+        Select Case d_Sea
+        Case Is >= d_Smin_Opt
+            d_St = d_Sea
+            Do While d_St > d_Smin_Opt '''''''First Stage''''''''
+                'd_St = d_St - d_M 'CHANGE MADE
+                d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+                d_efsNPVt = (d_d ^ i_Cnt_e) * (d_P1 * d_Wt - d_C1)
+                d_efsNPVt_A = d_efsNPVt_A + d_efsNPVt
+                d_St = d_St - d_M
+                i_Cnt_e = i_Cnt_e + 1
+                
+            Loop
+
+            Dim i_eYearfs As Double
+            i_eYearfs = i_Cnt_e - 1
+            
+            '''Second Stage'''''''
+            '''Year of Dredging''''
+            d_St = d_Smax_Opt
+            d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+            d_CD = F_DredgingCost(d_M, i_FD2_Max_Opt, s_ECD)
+            d_essNPVt = (d_d ^ (i_Cnt_e)) * (d_P1 * d_Wt - (d_P1 - d_PD) * ((100 * 2.65) / (d_Cw)) * (i_FD2_Max_Opt * d_M) - d_C1 - d_CD * (d_M * i_FD2_Max_Opt))
+            d_essNPVt_A = d_essNPVt_A + d_essNPVt
+            i_Cnt_e = i_Cnt_e + 1
+            
+            Do While d_St > d_Smin_Opt
+                
+                d_St = d_St - d_M
+                d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+                d_essNPVt = (d_d ^ (i_Cnt_e)) * (d_P1 * d_Wt - d_C1)
+                d_essNPVt_A = d_essNPVt_A + d_essNPVt
+                i_Cnt_e = i_Cnt_e + 1
+            Loop
+            
+            Dim d_Total_eNPV As Double
+            
+            If i_FD2_Max_Opt < 1 Then
+            TFinf_Dredging
+            Exit Function
+            End If
+            
+            d_Total_eNPV = d_efsNPVt_A + d_essNPVt_A / (1 - (d_d ^ i_FD2_Max_Opt))
+             
+            
+        Worksheets("Econ. Results & Conclusions").Activate
+        Range("D11").Value = d_Total_eNPV
+        Range("E59").Value = i_eYearfs
+        Range("E74").Value = i_eYearfs
+        Range("E75").Value = i_FD2_Max_Opt
+       
+          '------------------------------case2------------------------------'
+          
+        Case Is > d_Smin
+        Dim i_FD1e As Double
+        i_FD1e = 1
+        Dim i_FD1e_Max As Double
+        i_FD1e_Max = 1 + Application.WorksheetFunction.RoundDown(((d_S0 - d_Se) * (d_ASD / 100)) / d_M, 0)
+        
+        
+        
+        
+        
+        Dim MyData3() As Variant
+        ReDim MyData3(i_FD1e_Max, 7)
+        
+        Do While i_FD1e <= i_FD1e_Max   'Loop for initial Dredging
+            'initial dredging
+            d_St = d_Sea
+            d_St = d_St + d_M * (i_FD1e - 1)
+            d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+            d_CD = F_DredgingCost(d_M, i_FD1e, s_ECD)
+            d_efsNPVt = d_d ^ (1) * (d_P1 * d_Wt - (d_P1 - d_PD) * ((100 * 2.65) / (d_Cw)) * (i_FD1e * d_M) - d_C1 - d_CD * (d_M * i_FD1e))
+            MyData3(i_FD1e, 2) = d_St
+            MyData3(i_FD1e, 3) = d_Wt
+            
+            Dim i_FD2e As Double
+            i_FD2e = 1
+            Dim i_Cnt As Double
+            
+            Dim MyData4() As Variant
+             
+            Do While i_FD2e <= i_FD1e
+                i_Cnt = 1
+                d_essNPVt_A = 0
+                
+                ReDim MyData4(i_FD1e, 5)
+    
+                  
+                Do While i_Cnt < i_FD2e
+                    'year of NO dredging
+                    d_St = d_St - d_M
+                    d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+                    d_essNPVt = (d_d ^ (i_Cnt + 1)) * (d_P1 * d_Wt - d_C1)
+    
+                    d_essNPVt_A = d_essNPVt_A + d_essNPVt
+                    
+                    MyData4(i_Cnt, 1) = i_Cnt
+                    MyData4(i_Cnt, 2) = d_St
+                    MyData4(i_Cnt, 3) = d_Wt
+                    MyData4(i_Cnt, 4) = d_essNPVt
+                    MyData4(i_Cnt, 5) = d_essNPVt_A
+                    
+                    i_Cnt = i_Cnt + 1
+                    
+                Loop
+
+                '
+                'year of dredging
+                d_St = d_St + d_M * (i_FD2e - 1)
+                d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+                d_CD = F_DredgingCost(d_M, i_FD2e, s_ECD)
+                d_essNPVt = (d_d ^ (i_FD2e + 1)) * ((d_P1 * d_Wt - (d_P1 - d_PD) * ((100 * 2.65) / d_Cw) * (i_FD2e * d_M) - d_C1 - d_CD * (d_M * i_FD2e)))
+                d_essNPVt_A = d_essNPVt_A + d_essNPVt
+                
+                Dim d_essNPV_Inf As Double
+                d_essNPV_Inf = d_essNPVt_A / (1 - d_d ^ (i_FD2e))
+                
+                MyData4(i_Cnt, 1) = i_Cnt
+                MyData4(i_Cnt, 2) = d_St
+                MyData4(i_Cnt, 3) = d_Wt
+                MyData4(i_Cnt, 4) = d_essNPVt
+                MyData4(i_Cnt, 5) = d_essNPVt_A
+              
+              'Keep Maximum value for exsiting dam & case2 & second stage
+                Dim i_FD2e_Opt As Double
+                Dim d_FD2e_essNPV_Opt As Double
+                If i_FD2e = 1 Then
+                    i_FD2e_Opt = i_FD2e
+                    d_FD2e_essNPV_Opt = d_essNPV_Inf
+                End If
+                If d_essNPV_Inf > d_FD2e_essNPV_Opt Then
+                    d_FD2e_essNPV_Opt = d_essNPV_Inf
+                    i_FD2e_Opt = i_FD2e
+                End If
+                    
+                i_FD2e = i_FD2e + 1
+            Loop
+            'Keep Maximum value for exsiting dam & case2 & first dredging
+   
+            d_Total_eNPV = d_efsNPVt + d_FD2e_essNPV_Opt
+            Dim d_Total_eNPV_Opt As Double
+            Dim i_FD1e_Opt As Double
+            Dim i_FD2e_Max_Opt As Double
+                            
+            If i_FD1e = 1 Then
+            d_Total_eNPV_Opt = d_Total_eNPV
+            i_FD1e_Opt = i_FD1e
+            i_FD2e_Max_Opt = i_FD2e_Opt
+            End If
+            
+            If d_Total_eNPV > d_Total_eNPV_Opt Then
+            d_Total_eNPV_Opt = d_Total_eNPV
+            i_FD1e_Opt = i_FD1e
+            i_FD2e_Max_Opt = i_FD2e_Opt
+            End If
+                
+                MyData3(i_FD1e, 1) = i_FD1e
+                MyData3(i_FD1e, 4) = d_efsNPVt
+                MyData3(i_FD1e, 5) = i_FD2e_Opt
+                MyData3(i_FD1e, 6) = d_FD2e_essNPV_Opt
+                MyData3(i_FD1e, 7) = d_Total_eNPV
+            
+            i_FD1e = i_FD1e + 1
+          
+        Loop
+               
+            
+        Worksheets("Econ. Results & Conclusions").Activate
+        Range("D11").Value = d_Total_eNPV_Opt
+        Range("E52").Value = d_Sea + d_M * (i_FD1e_Opt - 1)
+        
+        Range("E59").Value = "Right Now"
+        Range("E74").Value = "Right Now (No Cycle)"
+        Range("E75").Value = i_FD2e_Max_Opt
+        Range("E87").Value = i_FD1e_Opt * d_M
+        Range("E88").Value = i_FD2e_Max_Opt * d_M
+        Range("C101").Value = Application.WorksheetFunction.Min((i_FD1e_Opt * d_M) * 100 / (d_S0 - d_Sea), 100)
+        Range("C102").Value = Application.WorksheetFunction.Min((i_FD2e_Max_Opt * d_M) * 100 / (d_S0 - (d_Sea + d_M * (i_FD1e_Opt - 1)) + (i_FD2e_Max_Opt * d_M)), 100)
+        Range("D101").Value = (d_S0 - d_Sea) * 100 / d_S0
+        
+        If i_FD1e_Opt * d_M >= d_MD Or i_FD2e_Max_Opt * d_M >= d_MD Then
+        Range("B129:E129").Select
+        With Selection.Interior
+            .ColorIndex = 6
+            .Pattern = xlSolid
+        End With
+        Range("B129").Value = "The physical maximum limit for removal of sediment with dredging, MD, specified in the User Input page, is being exceeded. Decrease ASD or increase MD."
+        Else
+        Range("B129:E129").Select
+        Selection.Interior.ColorIndex = xlNone
+        Range("B129").Value = ""
+        End If
+        
+        
+        Case Else '------------case 3------------------------------------
+        TFinf_Dredging
+        
+        End Select
+        
+    End If
+Exit Function
+HandleErr:
+    MsgBox "Error#D occurred." & vbCrLf & "#" & Err.Number & ":" & Err.Description
+    F_Dredging = False
+
+End Function
+Sub TFinf_Dredging()
+
+        Worksheets("Econ. Results & Conclusions").Activate
+        Range("D11").Value = "Sustainable solution is technically infeasible"
+        Range("E52").Value = "infeasible"
+        Range("E59").Value = "Sustainable solution is technically infeasible"
+        Range("E74").Value = "Sustainable solution is technically infeasible"
+        Range("E75").Value = "Sustainable solution is technically infeasible"
+        Range("E87").Value = "Sustainable solution is technically infeasible"
+        Range("E88").Value = "Sustainable solution is technically infeasible"
+        Range("C101").Value = "infeasible"
+        Range("C102").Value = "infeasible"
+        Range("D101").Value = "infeasible"
+        
+        Range("B129:E129").Select
+        Selection.Interior.ColorIndex = xlNone
+        Range("B129").Value = ""
+End Sub
+'
+Function F_Trucking() As Boolean
+'Calculate NPV for Trucking
+'
+    On Error GoTo HandleErr
+    F_Trucking = True
+    
+    
+    'Dim d_C2 As Double
+        'd_C2 = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D53").Value
+         
+         
+    Dim d_S As Double
+        If d_E = 0 Then
+        Else
+            d_S = d_S0
+        End If
+      
+    Dim d_Smin As Double
+        d_Smin = (1 - (d_CLT / 100)) * d_S0
+
+    ''Variables initialized on each stage
+    Dim d_St As Double
+    Dim d_Wt As Double
+    
+    Dim i_FD1 As Double
+        i_FD1 = 1
+    Dim d_fsNPVt As Double
+    Dim d_fsNPVt_A As Double
+        d_fsNPVt_A = 0
+    Dim i_FD1_Max As Double
+        i_FD1_Max = Application.WorksheetFunction.RoundDown(((d_S0 - d_Smin) / d_M), 0)
+    
+    
+    
+    Dim MyData1() As Variant
+    ReDim MyData1(i_FD1_Max, 8)
+ 
+    d_St = d_S0 - d_M
+    
+    Do While i_FD1 <= i_FD1_Max
+        '
+        'First Stage NPVt
+        
+        d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+        d_fsNPVt = (d_d ^ i_FD1) * (d_P1 * d_Wt - d_C1)
+                               
+        d_fsNPVt_A = d_fsNPVt_A + d_fsNPVt
+       
+        MyData1(i_FD1, 3) = d_Wt
+        
+            '
+            'Calculate Second Stage Maximum Cycle
+            
+            Dim MyData2() As Variant
+            Dim d_smin_FD1 As Double
+                d_smin_FD1 = d_St
+            
+            Dim d_Smax As Double
+                d_Smax = d_smin_FD1 + ((d_S0 - d_St) * d_AST / 100) - d_M
+                   
+            Dim i_FD2_Max As Double
+                i_FD2_Max = Application.WorksheetFunction.RoundDown(((d_Smax - d_smin_FD1) / d_M) + 1, 0)
+            
+            
+            Dim i_FD2 As Double
+                i_FD2 = 1
+          
+            Do While i_FD2 <= i_FD2_Max
+                '
+                'Second Stage NPVt
+                ReDim MyData2(i_FD2_Max, 5) As Variant
+                Dim i_MyRow As Double
+                i_MyRow = 1
+                MyData2(i_MyRow, 1) = 1
+                
+                Dim d_Supr As Double
+                
+                d_Supr = d_smin_FD1 + (i_FD2 - 1) * d_M
+                MyData2(i_MyRow, 2) = d_Supr
+                
+                d_Wt = 0
+                MyData2(i_MyRow, 3) = d_Wt
+                
+                Dim d_ssNPVt As Double
+                d_ssNPVt = (d_d ^ (i_FD1 + 1)) * (d_P1 * d_Wt - d_C1 - (d_CT * (d_M * i_FD2)))
+                MyData2(i_MyRow, 4) = d_ssNPVt
+                
+                Dim d_ssNPVt_A As Double
+                    d_ssNPVt_A = d_ssNPVt
+                MyData2(i_MyRow, 5) = d_ssNPVt_A
+                
+                d_Supr = (d_Supr - d_M)
+                
+                Dim i_cnt_dis As Double
+                i_cnt_dis = 1
+                
+                Do While 1 < i_FD2 And i_cnt_dis < i_FD2 '''COUNTER for d_FD2_ssNPV_Opt
+
+                    i_MyRow = i_MyRow + 1
+                    MyData2(i_MyRow, 1) = i_MyRow
+                    MyData2(i_MyRow, 2) = d_Supr
+                    
+                    d_Wt = (4 * (d_Supr * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_Supr + d_Gd * d_sd ^ 2 / d_MAR))
+                    MyData2(i_MyRow, 3) = d_Wt
+                    
+                    d_ssNPVt = (d_d ^ (i_FD1 + 1 + i_cnt_dis)) * (d_P1 * d_Wt - d_C1) ''''''change discount factors here
+                    
+                    MyData2(i_MyRow, 4) = d_ssNPVt
+                    
+                    d_ssNPVt_A = d_ssNPVt_A + d_ssNPVt
+                    MyData2(i_MyRow, 5) = d_ssNPVt_A
+                    d_Supr = d_Supr - d_M
+                    i_cnt_dis = i_cnt_dis + 1
+                    
+                Loop
+                        
+                Dim d_ssNPV_Inf As Double
+                    d_ssNPV_Inf = d_ssNPVt_A / (1 - (d_d ^ (i_FD2)))
+                    
+             
+                '
+                'Keep Maximum NPVt on Second Stage
+                
+                
+                Dim i_FD2_Opt As Double
+                Dim d_FD2_ssNPV_Opt As Double
+                If i_FD2 = 1 Then
+                    i_FD2_Opt = i_FD2
+                    d_FD2_ssNPV_Opt = d_ssNPV_Inf
+                End If
+                If d_ssNPV_Inf > d_FD2_ssNPV_Opt Then
+                        d_FD2_ssNPV_Opt = d_ssNPV_Inf
+                        i_FD2_Opt = i_FD2
+                End If
+                
+                i_FD2 = i_FD2 + 1
+                    
+            Loop
+                       
+            Dim d_Total_NPV As Double
+                d_Total_NPV = d_fsNPVt_A + (d_FD2_ssNPV_Opt) - d_C2
+                
+            '
+            '   Keep Maximum Total NPV
+            Dim d_Total_NPV_Opt As Double
+            Dim i_FD1_Opt As Double
+            Dim i_FD2_Max_Opt As Double
+            Dim d_Smin_Opt As Double '''For existing dams
+            Dim d_Smax_Opt As Double '''For existing dams
+            Dim i_first As Double
+            
+            If i_FD1 >= 1 And i_FD2_Opt >= 1 And i_first <> 1 Then
+                d_Total_NPV_Opt = d_Total_NPV
+                i_FD1_Opt = i_FD1
+                i_FD2_Max_Opt = i_FD2_Opt
+                d_Smin_Opt = d_St
+                d_Smax_Opt = d_St + (d_M * (i_FD2_Opt - 1))
+                
+                i_first = 1
+            End If
+            
+           
+            
+            
+            If i_FD1 >= 1 And i_FD2_Opt >= 1 And i_first = 1 Then
+            
+                If d_Total_NPV > d_Total_NPV_Opt Then
+                    d_Total_NPV_Opt = d_Total_NPV
+                    i_FD1_Opt = i_FD1
+                    i_FD2_Max_Opt = i_FD2_Opt
+                    d_Smin_Opt = d_St
+                    d_Smax_Opt = d_St + (d_M * (i_FD2_Opt - 1))
+                End If
+            End If
+        
+            'table
+            '
+    
+            MyData1(i_FD1, 1) = i_FD1
+            MyData1(i_FD1, 2) = d_St
+            MyData1(i_FD1, 4) = d_fsNPVt
+            MyData1(i_FD1, 5) = d_fsNPVt_A
+            MyData1(i_FD1, 6) = i_FD2_Opt
+            MyData1(i_FD1, 7) = d_FD2_ssNPV_Opt
+            MyData1(i_FD1, 8) = d_Total_NPV
+                       
+    
+        i_FD1 = i_FD1 + 1
+        d_St = d_St - d_M
+    Loop
+  
+    If i_FD1_Opt < 1 Then
+    TFinf_Trucking
+    Exit Function
+    End If
+    
+    If i_FD2_Max_Opt < 1 Then
+    TFinf_Trucking
+    Exit Function
+    End If
+    
+    Worksheets("Econ. Results & Conclusions").Activate
+    Range("d12").Value = d_Total_NPV_Opt
+    Range("E53").Value = d_Smax_Opt
+    
+    Range("E60").Value = i_FD1_Opt
+    Range("E76").Value = i_FD1_Opt
+    Range("E77").Value = i_FD2_Max_Opt
+    Range("E89").Value = "N/A"
+    Range("E90").Value = i_FD2_Max_Opt * d_M
+    Range("C103").Value = "N/A"
+    Range("C104").Value = (i_FD2_Max_Opt * d_M) * 100 / (d_S0 - d_Smin_Opt)
+    Range("D103").Value = (d_S0 - d_Smin_Opt) * 100 / d_S0
+       
+    If i_FD2_Max_Opt * d_M >= d_MT Then
+    Range("B114:E114").Select
+    With Selection.Interior
+        .ColorIndex = 6
+        .Pattern = xlSolid
+    End With
+    Range("B114").Value = "The physical maximum limit for removal of sediment with trucking, MT, specified in the User Input page, is being exceeded. Decrease AST or increase MT."
+    Else
+    Range("B114:E114").Select
+    Selection.Interior.ColorIndex = xlNone
+    Range("B114").Value = ""
+    End If
+'''''''''''''''''
+    If d_E = 0 Then
+
+        Dim d_Sea As Double '''adjusted Se
+        d_Sea = d_S0 - d_M * Application.WorksheetFunction.Round((d_S0 - d_Se) / d_M, 0)
+        Dim i_Cnt_e As Double
+            i_Cnt_e = 1
+        Dim d_efsNPVt As Double
+        Dim d_efsNPVt_A As Double
+            d_efsNPVt_A = 0
+        Dim d_essNPVt As Double
+        Dim d_essNPVt_A As Double
+            d_essNPVt_A = 0
+     
+        
+        '---------------------------------case1--------------------'
+        
+        Select Case d_Sea
+        Case Is >= d_Smin_Opt
+            d_St = d_Sea
+            Do While d_St > d_Smin_Opt '''''''First Stage''''''''
+                'd_St = d_St - d_M CHANGE MADE
+                d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+                 
+                d_efsNPVt = (d_d ^ i_Cnt_e) * (d_P1 * d_Wt - d_C1)
+                'Debug.Print d_efsNPVt
+                
+                d_efsNPVt_A = d_efsNPVt_A + d_efsNPVt
+                d_St = d_St - d_M
+                i_Cnt_e = i_Cnt_e + 1
+            Loop
+
+            Dim i_eYearfs As Double
+            i_eYearfs = i_Cnt_e - 1
+            'Debug.Print i_eYearfs
+            '''Second Stage'''''''
+            '''Year of Trucking''''
+            d_St = d_Smax_Opt
+            d_Wt = 0
+            d_essNPVt = (d_d ^ (i_Cnt_e)) * (d_P1 * d_Wt - d_C1 - d_CT * (d_M * (i_FD2_Max_Opt)))
+            
+            Debug.Print d_essNPVt
+            d_essNPVt_A = d_essNPVt_A + d_essNPVt
+            
+            i_Cnt_e = i_Cnt_e + 1
+            
+            Do While d_St > d_Smin_Opt
+                
+                d_St = d_St - d_M
+                d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+                d_essNPVt = (d_d ^ (i_Cnt_e)) * (d_P1 * d_Wt - d_C1)
+                Debug.Print d_essNPVt
+                d_essNPVt_A = d_essNPVt_A + d_essNPVt
+                i_Cnt_e = i_Cnt_e + 1
+            Loop
+                'Debug.Print d_essNPVt_A
+            Dim d_Total_eNPV As Double
+            
+            If i_FD2_Max_Opt < 1 Then
+            TFinf_Trucking
+            Exit Function
+            End If
+            
+            
+            d_Total_eNPV = d_efsNPVt_A + d_essNPVt_A / (1 - (d_d ^ (i_FD2_Max_Opt + 1))) ''change made
+            'Debug.Print d_efsNPVt_A
+            'Debug.Print d_essNPVt_A
+            'Debug.Print i_FD2_Max_Opt
+            'Debug.Print d_Total_eNPV
+        Worksheets("Econ. Results & Conclusions").Activate
+        Range("d12").Value = d_Total_eNPV
+        Range("E60").Value = i_eYearfs
+        Range("E76").Value = i_eYearfs
+        Range("E77").Value = i_FD2_Max_Opt
+        
+          '------------------------------case2------------------------------'
+          
+        Case Is > d_Smin
+        Dim i_FD1e As Double
+        i_FD1e = 1
+        Dim i_FD1e_Max As Double
+        i_FD1e_Max = 1 + Application.WorksheetFunction.RoundDown(((d_S0 - d_Se) * (d_AST / 100)) / d_M, 0)
+        
+        
+        
+        Dim MyData3() As Variant
+        ReDim MyData3(i_FD1e_Max, 7)
+        
+        Do While i_FD1e <= i_FD1e_Max   'Loop for initial Trucking
+           
+            d_St = d_Sea
+            d_St = d_St + d_M * (i_FD1e - 1)
+            d_Wt = 0
+            d_efsNPVt = d_d ^ (1) * (d_P1 * d_Wt - d_C1 - d_CT * (d_M * i_FD1e))
+            MyData3(i_FD1e, 2) = d_St
+            MyData3(i_FD1e, 3) = d_Wt
+           
+            Dim i_FD2e As Double
+            i_FD2e = 1
+            Dim i_Cnt As Double
+            
+            Dim MyData4() As Variant
+          
+            Do While i_FD2e <= i_FD1e
+                i_Cnt = 1
+                d_essNPVt_A = 0
+                
+                ReDim MyData4(i_FD1e, 5)
+    
+                  
+                Do While i_Cnt < i_FD2e
+                    'year of NO Trucking
+                    d_St = d_St - d_M
+                    d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+                    d_essNPVt = (d_d ^ (i_Cnt + 1)) * (d_P1 * d_Wt - d_C1)
+    
+                    d_essNPVt_A = d_essNPVt_A + d_essNPVt
+                    
+                    MyData4(i_Cnt, 1) = i_Cnt
+                    MyData4(i_Cnt, 2) = d_St
+                    MyData4(i_Cnt, 3) = d_Wt
+                    MyData4(i_Cnt, 4) = d_essNPVt
+                    MyData4(i_Cnt, 5) = d_essNPVt_A
+                    
+                    i_Cnt = i_Cnt + 1
+                    
+                Loop
+
+                '
+                'year of Trucking
+                d_St = d_St + d_M * (i_FD2e - 1)
+                d_Wt = 0
+                d_essNPVt = (d_d ^ (i_FD2e + 1)) * ((d_P1 * d_Wt - d_C1 - d_CT * (d_M * i_FD2e)))
+                d_essNPVt_A = d_essNPVt_A + d_essNPVt
+                
+                Dim d_essNPV_Inf As Double
+                    d_essNPV_Inf = d_essNPVt_A / (1 - d_d ^ (i_FD2e))
+                
+                MyData4(i_Cnt, 1) = i_Cnt
+                MyData4(i_Cnt, 2) = d_St
+                MyData4(i_Cnt, 3) = d_Wt
+                MyData4(i_Cnt, 4) = d_essNPVt
+                MyData4(i_Cnt, 5) = d_essNPVt_A
+    
+                'Keep Maximum value for exsiting dam & case2 & second stage
+                Dim i_FD2e_Opt As Double
+                Dim d_FD2e_essNPV_Opt As Double
+                If i_FD2e = 1 Then
+                    i_FD2e_Opt = i_FD2e
+                    d_FD2e_essNPV_Opt = d_essNPV_Inf
+                End If
+                If d_essNPV_Inf > d_FD2e_essNPV_Opt Then
+                    d_FD2e_essNPV_Opt = d_essNPV_Inf
+                    i_FD2e_Opt = i_FD2e
+                End If
+                    
+                i_FD2e = i_FD2e + 1
+            Loop
+            'Keep Maximum value for exsiting dam & case2 & first Trucking
+            
+            d_Total_eNPV = d_efsNPVt + d_FD2e_essNPV_Opt
+            Dim d_Total_eNPV_Opt As Double
+            Dim i_FD1e_Opt As Double
+            Dim i_FD2e_Max_Opt As Double
+                            
+            If i_FD1e = 1 Then
+                d_Total_eNPV_Opt = d_Total_eNPV
+                i_FD1e_Opt = i_FD1e
+                i_FD2e_Max_Opt = i_FD2e_Opt
+            End If
+            If d_Total_eNPV > d_Total_eNPV_Opt Then
+                d_Total_eNPV_Opt = d_Total_eNPV
+                i_FD1e_Opt = i_FD1e
+                i_FD2e_Max_Opt = i_FD2e_Opt
+                        
+            End If
+                MyData3(i_FD1e, 1) = i_FD1e
+    
+                MyData3(i_FD1e, 4) = d_efsNPVt
+                MyData3(i_FD1e, 5) = i_FD2e_Opt
+                MyData3(i_FD1e, 6) = d_FD2e_essNPV_Opt
+                MyData3(i_FD1e, 7) = d_Total_eNPV
+            
+            i_FD1e = i_FD1e + 1
+            
+        Loop
+            
+            
+        Worksheets("Econ. Results & Conclusions").Activate
+        Range("d12").Value = d_Total_eNPV_Opt
+        Range("E53").Value = d_Sea + d_M * (i_FD1e_Opt - 1)
+        
+        Range("E60").Value = "Right Now"
+        Range("E76").Value = "Right Now (No Cycle)"
+        Range("E77").Value = i_FD2e_Max_Opt
+        Range("E89").Value = i_FD1e_Opt * d_M
+        Range("E90").Value = i_FD2e_Max_Opt * d_M
+        Range("C103").Value = Application.WorksheetFunction.Min((i_FD1e_Opt * d_M) * 100 / (d_S0 - d_Sea), 0)
+        Range("C104").Value = Application.WorksheetFunction.Min((i_FD2e_Max_Opt * d_M) * 100 / (d_S0 - (d_Sea + d_M * (i_FD1e_Opt - 1)) - (i_FD2e_Max_Opt * d_M)), 0)
+        Range("D103").Value = (d_S0 - d_Sea) * 100 / d_S0
+        
+        
+        If i_FD1e_Opt * d_M >= d_MT Or i_FD2e_Max_Opt * d_M >= d_MT Then
+        Range("B114:E114").Select
+        With Selection.Interior
+            .ColorIndex = 6
+            .Pattern = xlSolid
+        End With
+        Range("B114").Value = "The physical maximum limit for removal of sediment with trucking, MT, specified in the User Input page, is being exceeded. Decrease AST or increase MT."
+        Else
+        Range("B114:E114").Select
+        Selection.Interior.ColorIndex = xlNone
+        Range("B114").Value = ""
+        End If
+        
+        
+        Case Else '----------------------case3-------------------
+        TFinf_Trucking
+        End Select
+        
+    End If
+    
+    Range("B2").Activate
+    
+Exit Function
+HandleErr:
+    MsgBox "Error#T occurred." & vbCrLf & "#" & Err.Number & ":" & Err.Description
+    F_Trucking = False
+
+End Function
+ 
+'计算总的经济价值[D5], 不包含损失
+'
+Function F_NoRemoval_R() As Boolean
+    On Error GoTo HandleErr
+    F_NoRemoval_R = True
+    
+    
+           Dim d_S As Double
+                
+                If d_E = 0 Then
+                    d_S = d_Se
+                   
+                Else
+                    d_S = d_S0 - d_M
+                End If
+            
+            Dim d_St As Double
+                d_St = d_S
+                
+            Dim d_X As Double
+            Dim i_Year_Max As Double
+            Dim d_V As Double
+                d_V = d_DC
+            Dim i_Year As Double
+            i_Year = 1
+            Dim i_first As Double
+            i_first = 0
+            
+            Dim d_Ws0 As Double
+                d_Ws0 = (-(d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_Gd * d_sd ^ 2 / d_MAR))
+            
+            
+           
+            
+                Dim d_Wt As Double
+                Dim d_NPVt As Double
+                Dim d_NPVt_A As Double
+                Dim d_TNPV As Double
+                d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+                
+                Dim d_Send As Double
+                
+                Do While d_P1 * d_Wt - d_C1 > D_R * (-d_V) And d_St > 0
+                
+                    
+                    d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+                                     
+                    d_NPVt = (d_d ^ i_Year) * (d_P1 * d_Wt - d_C1)
+                    
+                    d_NPVt_A = d_NPVt_A + d_NPVt
+                    d_Send = d_St
+                    i_Year_Max = i_Year
+                    'Debug.Print "NRR_St="; d_St & "NPVt="; d_NPVt
+                    d_St = d_St - d_M
+                    i_Year = i_Year + 1
+                    
+                    i_first = 1
+                Loop
+                
+                    d_TNPV = d_NPVt_A + (d_d ^ (i_Year_Max)) * (-d_V) - d_C2
+                    
+            If i_first = 1 Then
+            ThisWorkbook.Worksheets("Econ. Results & Conclusions").Activate
+            Range("D5").Value = d_TNPV
+            Range("E29").Value = i_Year_Max    '没有移除选项，退役到退休的时间，：
+            Range("E31").Value = d_Send        '在不拆除选择时，退役时剩余水库库容
+            End If
+             
+            If i_first = 0 Then
+            ThisWorkbook.Worksheets("Econ. Results & Conclusions").Activate
+            Range("D5").Value = -d_V
+            Range("E29").Value = 0
+            Range("E31").Value = d_S
+            End If
+            
+            
+            Dim d_ARF As Double
+                    
+                If -d_V < 0 Then
+                    If i_Year_Max <= 1 Then
+                    d_ARF = -d_V
+                    Else
+                    d_ARF = D_MR * d_V / (((1 + D_MR) ^ (i_Year_Max)) - 1)
+                    Range("E37").Value = d_ARF   '需要支付不可持续期权的年度退休基金：退役
+                    End If
+                Else
+                Range("E37").Value = 0
+                End If
+                
+Exit Function
+HandleErr:
+    MsgBox "Error#NRR occurred." & vbCrLf & "#" & Err.Number & ":" & Err.Description
+    F_NoRemoval_R = False
+
+End Function
+ 
+ '计算没有移除项时，大坝被淤泥淤满的年数和收益
+ Function F_NoRemoval_RR() As Boolean
+    On Error GoTo HandleErr
+    F_NoRemoval_RR = True
+    
+    Dim d_Ws0 As Double
+        
+        If d_H = 2 Then
+           d_Ws0 = 0
+        Else
+            d_Ws0 = (-(d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_Gd * d_sd ^ 2 / d_MAR))
+        End If
+    
+     Dim d_S As Double
+        
+        If d_E = 0 Then
+            d_S = d_Se
+            
+        Else
+            d_S = d_S0 - d_M
+        End If
+    
+    
+        
+    Dim i_Year_Max As Double '''NUMBER OF YEARS UNTIL S=0
+        i_Year_Max = Application.WorksheetFunction.RoundUp(d_S / d_M, 0)
+        
+    Dim i_Year As Double
+        i_Year = 1
+        
+    Dim d_St As Double
+        d_St = d_S
+        
+    Dim d_Wt As Double
+    Dim d_NPVt As Double
+    Dim d_TNPV As Double
+    Dim d_NPVs0 As Double
+    Dim d_NPVt_A As Double
+
+    
+        Do Until i_Year >= i_Year_Max + 1
+
+            
+            d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+            d_NPVt = (d_d ^ i_Year) * (d_P1 * d_Wt - d_C1)
+            d_NPVt_A = d_NPVt_A + d_NPVt
+            'Debug.Print "St="; d_St & "NPVt="; d_NPVt
+            
+            d_St = d_St - d_M
+            i_Year = i_Year + 1
+        
+        Loop
+        
+            d_NPVs0 = d_P1 * d_Ws0 - d_C1
+            d_TNPV = d_NPVt_A + (d_d ^ (i_Year_Max + 1)) * (d_NPVs0 / (1 - d_d)) - d_C2
+            
+        
+
+    ThisWorkbook.Worksheets("Econ. Results & Conclusions").Activate
+    Range("D7").Value = d_TNPV
+    Range("E44").Value = i_Year_Max + 1
+
+    
+    
+Exit Function
+HandleErr:
+    MsgBox "Error#NRRR occurred." & vbCrLf & "#" & Err.Number & ":" & Err.Description
+    F_NoRemoval_RR = False
+
+End Function
+
+'计算超临界排沙系统技术的经济影响
+Function F_HSRS_TR() As Boolean
+    On Error GoTo HandleErr
+    F_HSRS_TR = True
+    
+    Dim d_technicalfeasibility As Double
+    d_technicalfeasibility = ThisWorkbook.Worksheets("Parameters").Range("D33").Value
+
+    If d_technicalfeasibility = 1 Then
+        Dim d_YA As Double
+        Dim d_WS As Double
+        Dim d_Qs As Double
+        Dim d_PH As Double
+        Dim d_CH As Double
+        
+        d_YA = ThisWorkbook.Worksheets("Parameters").Range("D34").Value
+        d_WS = ThisWorkbook.Worksheets("Parameters").Range("D35").Value
+        d_Qs = ThisWorkbook.Worksheets("Parameters").Range("D29").Value
+        d_PH = ThisWorkbook.Worksheets("Parameters").Range("D37").Value
+        d_CH = ThisWorkbook.Worksheets("Parameters").Range("D32").Value
+        
+        Dim d_S As Double
+        Dim d_St As Double
+        'Dim d_C2 As Double
+        'd_C2 = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D53").Value
+        If d_E = 0 Then
+        d_S = d_Se
+        
+        Else
+        d_S = d_S0 - d_M
+        End If
+            
+        d_St = d_S
+        
+        Dim d_Smin As Double
+        d_Smin = (1 - (d_CLH / 100)) * d_S0
+        
+        Dim d_Wt As Double
+        d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+        
+        If Application.WorksheetFunction.Min(d_YA * d_Wt / d_WS, d_Qs) >= d_M Then
+        
+            
+            Dim d_NPV_X As Double
+            Dim d_TNPV As Double
+            Dim d_TNPV_Opt As Double
+            Dim d_ANPV_NX  As Double
+            Dim d_NPV_NX  As Double
+            Dim i_Year_Opt  As Double
+            Dim d_St_Opt   As Double
+            Dim i_Year As Double
+            i_Year = 1
+            
+            i_Year = 1
+            d_TNPV = (d_d ^ (i_Year)) * (d_P1 * (d_Wt - d_WS * d_M) + (d_PH - d_CH / d_WS) * d_WS * d_M - d_C1) * (1 / (1 - d_d)) - d_C2
+            
+            d_TNPV_Opt = d_TNPV
+            d_ANPV_NX = (d_d ^ (i_Year)) * (d_P1 * d_Wt - d_C1)
+            d_St_Opt = d_St
+            i_Year_Opt = i_Year
+            
+            d_St = d_St - d_M
+            i_Year = 2
+            
+            
+            Do While d_St >= d_Smin
+                        d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+        
+                        d_NPV_NX = (d_d ^ (i_Year)) * (d_P1 * d_Wt - d_C1)
+                        d_NPV_X = (d_d ^ (i_Year)) * (d_P1 * (d_Wt - d_WS * d_M) + (d_PH - d_CH / d_WS) * d_WS * d_M - d_C1)
+                        d_TNPV = d_ANPV_NX + d_NPV_X * (1 / (1 - d_d)) - d_C2
+                        d_ANPV_NX = d_ANPV_NX + d_NPV_NX
+                            
+                        If d_TNPV_Opt < d_TNPV Then
+                        d_TNPV_Opt = d_TNPV
+                        i_Year_Opt = i_Year
+                        d_St_Opt = d_St
+                        Else
+                        End If
+                        'Debug.Print "St="; d_St & "TNPV"; d_TNPV
+                        i_Year = i_Year + 1
+                        d_St = d_St - d_M
+                Loop
+            
+            
+            
+            ThisWorkbook.Worksheets("Econ. Results & Conclusions").Activate
+            Range("D10").Value = d_TNPV_Opt
+            Range("E58").Value = i_Year_Opt
+            Range("E86").Value = d_M
+            Range("E73").Value = 1
+            Range("E51").Value = d_St_Opt
+            Range("D100").Value = ((d_S0 - d_St_Opt) * 100) / d_S0
+            
+            If d_S0 = d_St_Opt Then
+            Range("C100").Value = "All sediment removed"
+            Else
+            Range("C100").Value = (d_M * 100) / (d_S0 - d_St_Opt)
+            End If
+            
+        Else
+        ThisWorkbook.Worksheets("Econ. Results & Conclusions").Activate
+        Range("D10").Value = "Total Removal with HSRS is technically infeasible, See Partial Removal with HSRS"
+        Range("E58").Value = "Not applicable"
+        Range("E86").Value = "Not applicable"
+        Range("E73").Value = "Not applicable"
+        Range("E51").Value = "Not applicable"
+        Range("D100").Value = "N/A"
+        Range("C100").Value = "N/A"
+        
+        End If
+    
+    Else
+    ThisWorkbook.Worksheets("Econ. Results & Conclusions").Activate
+    Range("D10").Value = "HSRS is technically infeasible"
+    Range("E58").Value = "Technically infeasible"
+    Range("E86").Value = "Technically infeasible"
+    Range("E73").Value = "Technically infeasible"
+    Range("E51").Value = "Technically infeasible"
+    Range("D100").Value = "N/A"
+    Range("C100").Value = "N/A"
+    End If
+    
+    
+    
+Exit Function
+HandleErr:
+   MsgBox "Error#HT occurred." & vbCrLf & "#" & Err.Number & ":" & Err.Description
+    F_HSRS_TR = False
+
+
+End Function
+Function F_HSRS_PR_R() As Boolean
+    On Error GoTo HandleErr
+    F_HSRS_PR_R = True
+    
+    Dim d_technicalfeasibility As Double
+    d_technicalfeasibility = ThisWorkbook.Worksheets("Parameters").Range("D33").Value
+
+    If d_technicalfeasibility = 1 Then
+        Dim d_YA As Double
+        Dim d_WS As Double
+        Dim d_Qs As Double
+        Dim d_PH As Double
+        Dim d_CH As Double
+        
+        d_YA = ThisWorkbook.Worksheets("Parameters").Range("D34").Value
+        d_WS = ThisWorkbook.Worksheets("Parameters").Range("D35").Value
+        d_Qs = ThisWorkbook.Worksheets("Parameters").Range("D29").Value
+        d_PH = ThisWorkbook.Worksheets("Parameters").Range("D37").Value
+        d_CH = ThisWorkbook.Worksheets("Parameters").Range("D32").Value
+        
+        Dim d_S As Double
+        Dim d_St As Double
+        'Dim d_C2 As Double
+        'd_C2 = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D53").Value
+        If d_E = 0 Then
+        d_S = d_Se
+        
+        Else
+        d_S = d_S0 - d_M
+        End If
+            
+        Dim d_V As Double
+        d_V = d_DC
+            
+        d_St = d_S
+        
+        Dim d_Wt As Double
+        d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+        
+        If Application.WorksheetFunction.Min(d_YA * d_Wt / d_WS, d_Qs) <= d_M Then
+        
+            
+            Dim d_NPV_X As Double
+            Dim d_TNPV As Double
+            Dim d_TNPV_Opt As Double
+            Dim d_ANPV_NX  As Double
+            Dim d_NPV_NX  As Double
+            Dim i_Year_Opt  As Double
+            Dim d_St_Opt   As Double
+            Dim i_Year As Double
+            Dim d_X As Double
+            Dim d_NPVt As Double
+            Dim d_NPVt_A As Double
+            Dim d_Send As Double
+            Dim i_Year_Max As Double
+            Dim d_Send_Opt As Double
+            Dim i_wait As Double
+            Dim i_first As Double
+            Dim i_wait_Opt As Double
+            Dim d_AX As Double
+            Dim d_AX_Opt As Double
+            
+            i_first = 0
+            i_wait = 1
+            
+            
+            Do While d_P1 * d_Wt - d_C1 > D_R * (-d_V) And d_St > 0
+                    i_Year = i_wait
+                    
+                    d_NPV_NX = (d_d ^ (i_wait)) * (d_P1 * d_Wt - d_C1)
+                    
+                    Do While d_P1 * d_Wt - d_C1 > D_R * (-d_V) And d_St > 0
+                            
+                            d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+                            d_X = Application.WorksheetFunction.Min(d_YA * d_Wt / d_WS, d_Qs)
+                            Debug.Print "X"; d_X
+                            
+                            d_AX = d_AX + d_X
+                            
+                            d_NPVt = (d_d ^ i_Year) * (d_P1 * (d_Wt - d_WS * d_X) + (d_PH - d_CH / d_WS) * d_WS * d_X - d_C1)
+                            
+                            d_NPVt_A = d_NPVt_A + d_NPVt
+                            d_Send = d_St
+                            i_Year_Max = i_Year
+                            'Debug.Print "HR_R_St="; d_St & "*"; d_NPVt
+                            d_St = d_St - (d_M - d_X)
+                            i_Year = i_Year + 1
+                        
+                        Loop
+                        
+                        
+                    If i_first = 1 Then
+                    d_TNPV = d_ANPV_NX + d_NPVt_A + (d_d ^ (i_Year_Max)) * (-d_V) - d_C2
+                    Debug.Print "CHECH"; i_wait & "*"; i_Year_Max
+                    End If
+
+                    
+                    If i_first = 0 Then
+                    d_TNPV = d_NPVt_A + (d_d ^ (i_Year_Max)) * (-d_V) - d_C2
+                    i_Year_Opt = i_Year_Max
+                    d_Send_Opt = d_Send
+                    i_wait_Opt = i_wait
+                    d_TNPV_Opt = d_TNPV
+                    d_AX_Opt = d_AX
+                    i_first = 1
+                    Debug.Print "CHECH"; i_wait & "*"; i_Year_Max
+                    End If
+                    
+                    
+                    
+                    If d_TNPV > d_TNPV_Opt Then
+                    d_TNPV_Opt = d_TNPV
+                    d_Send_Opt = d_Send
+                    i_Year_Opt = i_Year_Max
+                    i_wait_Opt = i_wait
+                    d_AX_Opt = d_AX
+                    End If
+                    
+                    
+                    
+                    i_wait = i_wait + 1
+                    d_St = d_S - i_wait * d_M
+                    d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+                    d_NPVt_A = 0
+                    d_AX = 0
+                    d_ANPV_NX = d_ANPV_NX + d_NPV_NX
+                Loop
+            If i_first = 1 Then
+            
+            ThisWorkbook.Worksheets("Econ. Results & Conclusions").Activate
+            Range("D6").Value = d_TNPV_Opt
+            Range("E30").Value = i_Year_Opt
+            Range("E32").Value = d_Send_Opt
+            Range("E28").Value = i_wait_Opt
+            Range("E82").Value = d_AX_Opt / (i_Year_Opt - i_wait_Opt + 1)
+            Range("E69").Value = 1
+            End If
+             
+            If i_first = 0 Then
+            ThisWorkbook.Worksheets("Econ. Results & Conclusions").Activate
+            Range("D6").Value = -d_V
+            Range("E30").Value = 0
+            Range("E32").Value = d_S
+            Range("E28").Value = 0
+            Range("E82").Value = 0
+            Range("E69").Value = "Removal does not occurs"
+            End If
+            
+            Dim d_ARF As Double
+                    
+            If -d_V < 0 Then
+                    If i_Year_Opt <= 1 Then
+                    d_ARF = -d_V
+                    Else
+                    d_ARF = D_MR * d_V / (((1 + D_MR) ^ (i_Year_Opt)) - 1)
+                    Range("E38").Value = d_ARF
+                    End If
+            Else
+            Range("E38").Value = 0
+            End If
+            
+        Else
+            ThisWorkbook.Worksheets("Econ. Results & Conclusions").Activate
+            Range("D6").Value = "Partial Removal with HSRS is technically infeasible, See Total Removal with HSRS"
+            Range("E30").Value = "Not applicable"
+            Range("E32").Value = "Not applicable"
+            Range("E28").Value = "Not applicable"
+            Range("E82").Value = "Not applicable"
+            Range("E69").Value = "Not applicable"
+            Range("E38").Value = "Not applicable"
+            
+        End If
+    
+    Else
+
+        ThisWorkbook.Worksheets("Econ. Results & Conclusions").Activate
+        Range("D6").Value = "HSRS is technically infeasible"
+        Range("E30").Value = "Technically infeasible"
+        Range("E32").Value = "Technically infeasible"
+        Range("E28").Value = "Technically infeasible"
+        Range("E69").Value = "Technically infeasible"
+        Range("E82").Value = "Technically infeasible"
+        Range("E38").Value = "Technically infeasible"
+    End If
+    
+
+    
+Exit Function
+HandleErr:
+    MsgBox "Error#HT occurred." & vbCrLf & "#" & Err.Number & ":" & Err.Description
+    F_HSRS_PR_R = False
+
+
+End Function
+
+
+Function F_HSRS_PR_RR() As Boolean
+    On Error GoTo HandleErr
+    F_HSRS_PR_RR = True
+    
+    Dim d_technicalfeasibility As Double
+    d_technicalfeasibility = ThisWorkbook.Worksheets("Parameters").Range("D33").Value
+
+    If d_technicalfeasibility = 1 Then
+        Dim d_YA As Double
+        Dim d_WS As Double
+        Dim d_Qs As Double
+        Dim d_PH As Double
+        Dim d_CH As Double
+        
+        d_YA = ThisWorkbook.Worksheets("Parameters").Range("D34").Value
+        d_WS = ThisWorkbook.Worksheets("Parameters").Range("D35").Value
+        d_Qs = ThisWorkbook.Worksheets("Parameters").Range("D29").Value
+        d_PH = ThisWorkbook.Worksheets("Parameters").Range("D37").Value
+        d_CH = ThisWorkbook.Worksheets("Parameters").Range("D32").Value
+        
+        Dim d_S As Double
+        Dim d_St As Double
+        'Dim d_C2 As Double
+        'd_C2 = ThisWorkbook.Worksheets("User Input (Checklist)").Range("D53").Value
+                    
+        Dim d_Ws0 As Double
+                
+        If d_H = 2 Then
+        d_Ws0 = 0
+        Else
+        d_Ws0 = (-(d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_Gd * d_sd ^ 2 / d_MAR))
+        End If
+        
+        If d_E = 0 Then
+        d_S = d_Se
+        
+        Else
+        d_S = d_S0 - d_M
+        End If
+            
+        d_St = d_S
+        
+        Dim d_Wt As Double
+        d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+        
+        If Application.WorksheetFunction.Min(d_YA * d_Wt / d_WS, d_Qs) <= d_M Then
+        
+            
+            Dim d_NPV_X As Double
+            Dim d_TNPV As Double
+            Dim d_TNPV_Opt As Double
+            Dim d_ANPV_NX  As Double
+            Dim d_NPV_NX  As Double
+            Dim i_Year_Opt  As Double
+            Dim d_St_Opt   As Double
+            Dim i_Year As Double
+            Dim d_V As Double
+            Dim d_X As Double
+            Dim d_NPVt As Double
+            Dim d_NPVt_A As Double
+            Dim d_Send As Double
+            Dim i_Year_Max As Double
+            Dim d_Send_Opt As Double
+            Dim i_wait As Double
+            Dim i_first As Double
+            Dim i_wait_Opt As Double
+            Dim d_NPVs0 As Double
+            Dim d_AX As Double
+            Dim d_AX_Opt As Double
+            
+            
+            i_first = 0
+            i_wait = 1
+            
+            
+            Do While d_St > 0
+                    i_Year = i_wait
+                    
+                    d_NPV_NX = (d_d ^ (i_wait)) * (d_P1 * d_Wt - d_C1)
+                    
+                    Do While d_St > 0
+                            
+                            d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+                            d_X = Application.WorksheetFunction.Min(d_YA * d_Wt / d_WS, d_Qs)
+                            d_AX = d_X + d_AX
+                            
+                            d_NPVt = (d_d ^ i_Year) * (d_P1 * (d_Wt - d_WS * d_X) + (d_PH - d_CH / d_WS) * d_WS * d_X - d_C1)
+                            
+                            d_NPVt_A = d_NPVt_A + d_NPVt
+                            d_Send = d_St
+                            i_Year_Max = i_Year
+                            'Debug.Print "HR_R_St="; d_St & "*"; d_NPVt
+                            d_St = d_St - (d_M - d_X)
+                            i_Year = i_Year + 1
+                        
+                        Loop
+                        
+                        
+                    If i_first = 1 Then
+                    d_NPVs0 = d_P1 * d_Ws0 - d_C1
+                    d_TNPV = d_ANPV_NX + d_NPVt_A + (d_d ^ (i_Year_Max + 1)) * (d_NPVs0 / (1 - d_d)) - d_C2
+                    End If
+
+                    
+                    
+                    
+                    If i_first = 0 Then
+                    d_NPVs0 = d_P1 * d_Ws0 - d_C1
+                    d_TNPV = d_NPVt_A + (d_d ^ (i_Year_Max + 1)) * (d_NPVs0 / (1 - d_d)) - d_C2
+                    i_Year_Opt = i_Year
+                    d_Send_Opt = d_Send
+                    i_wait_Opt = i_wait
+                    d_TNPV_Opt = d_TNPV
+                    d_AX_Opt = d_AX
+                    i_first = 1
+                    End If
+                    
+                    
+                    
+                    If d_TNPV > d_TNPV_Opt Then
+                    d_TNPV_Opt = d_TNPV
+                    d_Send_Opt = d_Send
+                    i_Year_Opt = i_Year
+                    i_wait_Opt = i_wait
+                    d_AX_Opt = d_AX
+                    End If
+                    
+                    
+                    
+                    i_wait = i_wait + 1
+                    d_St = d_S - i_wait * d_M
+                    d_Wt = (4 * (d_St * d_MAR) - (d_Zpr ^ 2) * (d_sd ^ 2) + 4 * d_Gd * (d_sd ^ 2)) / (4 * (d_St + d_Gd * d_sd ^ 2 / d_MAR))
+                    d_NPVt_A = 0
+                    d_AX = 0
+                    d_ANPV_NX = d_ANPV_NX + d_NPV_NX
+                Loop
+   
+            ThisWorkbook.Worksheets("Econ. Results & Conclusions").Activate
+            Range("D8").Value = d_TNPV_Opt
+            Range("E45").Value = i_Year_Opt
+            Range("E43").Value = i_wait_Opt
+            Range("E83").Value = d_AX_Opt / (i_Year_Opt - i_wait_Opt)
+            Range("E70").Value = 1
+        
+        Else
+            ThisWorkbook.Worksheets("Econ. Results & Conclusions").Activate
+            Range("D8").Value = "Partial Removal with HSRS is technically infeasible, See Total Removal with HSRS"
+            Range("E45").Value = "Not applicable"
+            Range("E43").Value = "Not applicable"
+            Range("E83").Value = "Not applicable"
+            Range("E70").Value = "Not applicable"
+            
+        End If
+    
+    Else
+
+        ThisWorkbook.Worksheets("Econ. Results & Conclusions").Activate
+        Range("D8").Value = "HSRS is technically infeasible"
+        Range("E45").Value = "Technically infeasible"
+        Range("E43").Value = "Technically infeasible"
+        Range("E83").Value = "Technically infeasible"
+        Range("E70").Value = "Technically infeasible"
+    End If
+    
+
+    
+Exit Function
+HandleErr:
+    MsgBox "Error#HT occurred." & vbCrLf & "#" & Err.Number & ":" & Err.Description
+    F_HSRS_PR_RR = False
+
+
+End Function
+
+Function F_Safeguard() As Boolean
+    On Error GoTo HandleErr
+    F_Safeguard = True
+    
+   
+    Dim NNR_NH As Double
+    Dim NNR_HU As Double
+    Dim NNR_R As Double
+    Dim NNR_CA As Double
+    Dim NNR_IP As Double
+    Dim NNR_TI As Double
+    
+    NNR_NH = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("C30").Value
+    NNR_HU = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("D30").Value
+    NNR_R = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("E30").Value
+    NNR_CA = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("F30").Value
+    NNR_IP = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("G30").Value
+    NNR_TI = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("H30").Value
+    
+    Dim RNR_NH As Double
+    Dim RNR_HU As Double
+    Dim RNR_R As Double
+    Dim RNR_CA As Double
+    Dim RNR_IP As Double
+    Dim RNR_TI As Double
+    
+    RNR_NH = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("C32").Value
+    RNR_HU = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("D32").Value
+    RNR_R = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("E32").Value
+    RNR_CA = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("F32").Value
+    RNR_IP = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("G32").Value
+    RNR_TI = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("H32").Value
+    
+    Dim NPR_NH As Double
+    Dim NPR_HU As Double
+    Dim NPR_R As Double
+    Dim NPR_CA As Double
+    Dim NPR_IP As Double
+    Dim NPR_TI As Double
+    
+    NPR_NH = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("C31").Value
+    NPR_HU = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("D31").Value
+    NPR_R = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("E31").Value
+    NPR_CA = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("F31").Value
+    NPR_IP = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("G31").Value
+    NPR_TI = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("H31").Value
+    
+    
+    Dim RPR_NH As Double
+    Dim RPR_HU As Double
+    Dim RPR_R As Double
+    Dim RPR_CA As Double
+    Dim RPR_IP As Double
+    Dim RPR_TI As Double
+    
+    RPR_NH = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("C33").Value
+    RPR_HU = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("D33").Value
+    RPR_R = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("E33").Value
+    RPR_CA = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("F33").Value
+    RPR_IP = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("G33").Value
+    RPR_TI = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("H33").Value
+    
+    Dim F_NH As Double
+    Dim F_HU As Double
+    Dim F_R As Double
+    Dim F_CA As Double
+    Dim F_IP As Double
+    Dim F_TI As Double
+    
+    F_NH = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("C34").Value
+    F_HU = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("D34").Value
+    F_R = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("E34").Value
+    F_CA = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("F34").Value
+    F_IP = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("G34").Value
+    F_TI = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("H34").Value
+    
+    Dim H_NH As Double
+    Dim H_HU As Double
+    Dim H_R As Double
+    Dim H_CA As Double
+    Dim H_IP As Double
+    Dim H_TI As Double
+    
+    H_NH = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("C35").Value
+    H_HU = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("D35").Value
+    H_R = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("E35").Value
+    H_CA = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("F35").Value
+    H_IP = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("G35").Value
+    H_TI = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("H35").Value
+    
+    Dim D_NH As Double
+    Dim D_HU As Double
+    Dim D_R As Double
+    Dim D_CA As Double
+    Dim D_IP As Double
+    Dim D_TI As Double
+    
+    D_NH = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("C36").Value
+    D_HU = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("D36").Value
+    D_R = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("E36").Value
+    D_CA = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("F36").Value
+    D_IP = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("G36").Value
+    D_TI = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("H36").Value
+    
+    Dim T_NH As Double
+    Dim T_HU As Double
+    Dim T_R As Double
+    Dim T_CA As Double
+    Dim T_IP As Double
+    Dim T_TI As Double
+    
+    T_NH = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("C37").Value
+    T_HU = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("D37").Value
+    T_R = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("E37").Value
+    T_CA = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("F37").Value
+    T_IP = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("G37").Value
+    T_TI = ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("H37").Value
+    'Policy criteria'
+    
+    Dim PC As Double
+    If ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("B41") = "A" Or ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("B40") = "a" Then
+    PC = 1
+    ElseIf ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("B41") = "B" Or ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("B40") = "b" Then
+    PC = 2
+    ElseIf ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("B41") = "C" Or ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("B40") = "c" Then
+    PC = 3
+    ElseIf ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("B41") = "D" Or ThisWorkbook.Worksheets("User Input (Env. Safeguard)").Range("B40") = "d" Then
+    PC = 4
+    Else
+    MsgBox "Polocy level must be A, B, C, or D.", vbOKOnly + vbExclamation, "Data Entry Error"
+    End If
+    
+    
+    'Sum of ratings'
+    Dim SR_NNR
+    Dim SR_RNR
+    Dim SR_NPR
+    Dim SR_RPR
+    Dim SR_F
+    Dim SR_H
+    Dim SR_D
+    Dim SR_T
+   
+    SR_NNR = NNR_NH + NNR_HU + NNR_R + NNR_CA + NNR_IP + NNR_TI
+    SR_RNR = RNR_NH + RNR_HU + RNR_R + RNR_CA + RNR_IP + RNR_TI
+    SR_NPR = NPR_NH + NPR_HU + NPR_R + NPR_CA + NPR_IP + NPR_TI
+    SR_RPR = RPR_NH + RPR_HU + RPR_R + RPR_CA + RPR_IP + RPR_TI
+    SR_F = F_NH + F_HU + F_R + F_CA + F_IP + F_TI
+    SR_H = H_NH + H_HU + H_R + H_CA + H_IP + H_TI
+    SR_D = D_NH + D_HU + D_R + D_CA + D_IP + D_TI
+    SR_T = T_NH + T_HU + T_R + T_CA + T_IP + T_TI
+    
+    ThisWorkbook.Worksheets("Safeguard Results").Activate
+            Range("D8").Value = SR_NNR
+            Range("D10").Value = SR_RNR
+            Range("D9").Value = SR_NPR
+            Range("D11").Value = SR_RPR
+            Range("D12").Value = SR_F
+            Range("D13").Value = SR_H
+            Range("D14").Value = SR_D
+            Range("D15").Value = SR_T
+   
+    Dim CS_NNR As Double
+    Dim CS_RNR As Double
+    Dim CS_NPR As Double
+    Dim CS_RPR As Double
+    Dim CS_F As Double
+    Dim CS_H As Double
+    Dim CS_D As Double
+    Dim CS_T As Double
+    
+    Select Case SR_NNR
+        Case Is <= 6
+            CS_NNR = 1
+        Case Is <= 11
+            CS_NNR = 2
+        Case Is <= 15
+            CS_NNR = 3
+        Case Else
+            CS_NNR = 4
+    End Select
+    
+    Select Case SR_RNR
+        Case Is <= 6
+            CS_RNR = 1
+        Case Is <= 11
+            CS_RNR = 2
+        Case Is <= 15
+            CS_RNR = 3
+        Case Else
+            CS_RNR = 4
+    End Select
+    
+    Select Case SR_NPR
+        Case Is <= 6
+            CS_NPR = 1
+        Case Is <= 11
+            CS_NPR = 2
+        Case Is <= 15
+            CS_NPR = 3
+        Case Else
+            CS_NPR = 4
+    End Select
+    
+    Select Case SR_RPR
+        Case Is <= 6
+            CS_RPR = 1
+        Case Is <= 11
+            CS_RPR = 2
+        Case Is <= 15
+            CS_RPR = 3
+        Case Else
+            CS_RPR = 4
+    End Select
+    
+    
+    Select Case SR_F
+        Case Is <= 6
+            CS_F = 1
+        Case Is <= 11
+            CS_F = 2
+        Case Is <= 15
+            CS_F = 3
+        Case Else
+            CS_F = 4
+    End Select
+    
+    Select Case SR_H
+        Case Is <= 6
+            CS_H = 1
+        Case Is <= 11
+            CS_H = 2
+        Case Is <= 15
+            CS_H = 3
+        Case Else
+            CS_H = 4
+    End Select
+    
+    Select Case SR_D
+        Case Is <= 6
+            CS_D = 1
+        Case Is <= 11
+            CS_D = 2
+        Case Is <= 15
+            CS_D = 3
+        Case Else
+            CS_D = 4
+    End Select
+    
+    
+    Select Case SR_F
+        Case Is <= 6
+            CS_T = 1
+        Case Is <= 11
+            CS_T = 2
+        Case Is <= 15
+            CS_T = 3
+        Case Else
+            CS_T = 4
+    End Select
+    
+    Dim C_NNR As Double
+    Dim C_RNR As Double
+    Dim C_NPR As Double
+    Dim C_RPR As Double
+    Dim C_F As Double
+    Dim C_H As Double
+    Dim C_D As Double
+    Dim C_T As Double 'no 3's rule=1, at least one 3 rule=2, at least one 4 rule=3
+    
+    
+    If Application.WorksheetFunction.Max(NNR_NH, NNR_HU, NNR_R, NNR_CA, NNR_IP, NNR_TI) = 2 Then
+    C_NNR = 2
+    ElseIf Application.WorksheetFunction.Max(NNR_NH, NNR_HU, NNR_R, NNR_CA, NNR_IP, NNR_TI) = 3 Then
+    C_NNR = 3
+    ElseIf Application.WorksheetFunction.Max(NNR_NH, NNR_HU, NNR_R, NNR_CA, NNR_IP, NNR_TI) = 4 Then
+    C_NNR = 4
+    End If
+    
+    If Application.WorksheetFunction.Max(RNR_NH, RNR_HU, RNR_R, RNR_CA, RNR_IP, RNR_TI) = 2 Then
+    C_RNR = 2
+    ElseIf Application.WorksheetFunction.Max(RNR_NH, RNR_HU, RNR_R, RNR_CA, RNR_IP, RNR_TI) = 3 Then
+    C_RNR = 3
+    ElseIf Application.WorksheetFunction.Max(RNR_NH, RNR_HU, RNR_R, RNR_CA, RNR_IP, RNR_TI) = 4 Then
+    C_RNR = 4
+    End If
+    
+    If Application.WorksheetFunction.Max(NPR_NH, NPR_HU, NPR_R, NPR_CA, NPR_IP, NPR_TI) = 2 Then
+    C_NPR = 2
+    ElseIf Application.WorksheetFunction.Max(NPR_NH, NPR_HU, NPR_R, NPR_CA, NPR_IP, NPR_TI) = 3 Then
+    C_NPR = 3
+    ElseIf Application.WorksheetFunction.Max(NPR_NH, NPR_HU, NPR_R, NPR_CA, NPR_IP, NPR_TI) = 4 Then
+    C_NPR = 4
+    End If
+    
+    If Application.WorksheetFunction.Max(RPR_NH, RPR_HU, RPR_R, RPR_CA, RPR_IP, RPR_TI) = 2 Then
+    C_RPR = 2
+    ElseIf Application.WorksheetFunction.Max(RPR_NH, RPR_HU, RPR_R, RPR_CA, RPR_IP, RPR_TI) = 3 Then
+    C_RPR = 3
+    ElseIf Application.WorksheetFunction.Max(RPR_NH, RPR_HU, RPR_R, RPR_CA, RPR_IP, RPR_TI) = 4 Then
+    C_RPR = 4
+    End If
+    
+    If Application.WorksheetFunction.Max(F_NH, F_HU, F_R, F_CA, F_IP, F_TI) = 2 Then
+    C_F = 2
+    ElseIf Application.WorksheetFunction.Max(F_NH, F_HU, F_R, F_CA, F_IP, F_TI) = 3 Then
+    C_F = 3
+    ElseIf Application.WorksheetFunction.Max(F_NH, F_HU, F_R, F_CA, F_IP, F_TI) = 4 Then
+    C_F = 4
+    End If
+    
+    If Application.WorksheetFunction.Max(H_NH, H_HU, H_R, H_CA, H_IP, H_TI) = 2 Then
+    C_H = 2
+    ElseIf Application.WorksheetFunction.Max(H_NH, H_HU, H_R, H_CA, H_IP, H_TI) = 3 Then
+    C_H = 3
+    ElseIf Application.WorksheetFunction.Max(H_NH, H_HU, H_R, H_CA, H_IP, H_TI) = 4 Then
+    C_H = 4
+    End If
+    
+    If Application.WorksheetFunction.Max(D_NH, D_HU, D_R, D_CA, D_IP, D_TI) = 2 Then
+    C_D = 2
+    ElseIf Application.WorksheetFunction.Max(D_NH, D_HU, D_R, D_CA, D_IP, D_TI) = 3 Then
+    C_D = 3
+    ElseIf Application.WorksheetFunction.Max(D_NH, D_HU, D_R, D_CA, D_IP, D_TI) = 4 Then
+    C_D = 4
+    End If
+    
+    If Application.WorksheetFunction.Max(T_NH, T_HU, T_R, T_CA, T_IP, T_TI) = 2 Then
+    C_T = 2
+    ElseIf Application.WorksheetFunction.Max(T_NH, T_HU, T_R, T_CA, T_IP, T_TI) = 3 Then
+    C_T = 3
+    ElseIf Application.WorksheetFunction.Max(T_NH, T_HU, T_R, T_CA, T_IP, T_TI) = 4 Then
+    C_T = 4
+    End If
+    
+    
+    
+    'Total ratings'
+    
+    Dim TR_NNR
+    Dim TR_RNR
+    Dim TR_NPR
+    Dim TR_RPR
+    Dim TR_F
+    Dim TR_H
+    Dim TR_D
+    Dim TR_T
+    
+   
+    TR_NNR = Application.WorksheetFunction.Max(C_NNR, CS_NNR)
+    TR_RNR = Application.WorksheetFunction.Max(C_RNR, CS_RNR)
+    TR_NPR = Application.WorksheetFunction.Max(C_NPR, CS_NPR)
+    TR_RPR = Application.WorksheetFunction.Max(C_RPR, CS_RPR)
+    TR_F = Application.WorksheetFunction.Max(C_F, CS_F)
+    TR_H = Application.WorksheetFunction.Max(C_H, CS_H)
+    TR_D = Application.WorksheetFunction.Max(C_D, CS_D)
+    TR_T = Application.WorksheetFunction.Max(C_T, CS_T)
+            
+    Dim R_NNR
+    Dim R_RNR
+    Dim R_NPR
+    Dim R_RPR
+    Dim R_F
+    Dim R_H
+    Dim R_D
+    Dim R_T
+    
+    If TR_NNR = 4 Then
+    R_NNR = "D"
+    ElseIf TR_NNR = 3 Then
+    R_NNR = "C"
+    ElseIf TR_NNR = 2 Then
+    R_NNR = "B"
+    ElseIf TR_NNR = 1 Then
+    R_NNR = "A"
+    End If
+    
+    If TR_RNR = 4 Then
+    R_RNR = "D"
+    ElseIf TR_RNR = 3 Then
+    R_RNR = "C"
+    ElseIf TR_RNR = 2 Then
+    R_RNR = "B"
+    ElseIf TR_RNR = 1 Then
+    R_RNR = "A"
+    End If
+    
+    If TR_NPR = 4 Then
+    R_NPR = "D"
+    ElseIf TR_NPR = 3 Then
+    R_NPR = "C"
+    ElseIf TR_NPR = 2 Then
+    R_NPR = "B"
+    ElseIf TR_NPR = 1 Then
+    R_NPR = "A"
+    End If
+    
+    If TR_RPR = 4 Then
+    R_RPR = "D"
+    ElseIf TR_RPR = 3 Then
+    R_RPR = "C"
+    ElseIf TR_RPR = 2 Then
+    R_RPR = "B"
+    ElseIf TR_RPR = 1 Then
+    R_RPR = "A"
+    End If
+    
+    If TR_F = 4 Then
+    R_F = "D"
+    ElseIf TR_F = 3 Then
+    R_F = "C"
+    ElseIf TR_F = 2 Then
+    R_F = "B"
+    ElseIf TR_F = 1 Then
+    R_F = "A"
+    End If
+    
+    If TR_H = 4 Then
+    R_H = "D"
+    ElseIf TR_H = 3 Then
+    R_H = "C"
+    ElseIf TR_H = 2 Then
+    R_H = "B"
+    ElseIf TR_H = 1 Then
+    R_H = "A"
+    End If
+    
+    If TR_D = 4 Then
+    R_D = "D"
+    ElseIf TR_D = 3 Then
+    R_D = "C"
+    ElseIf TR_D = 2 Then
+    R_D = "B"
+    ElseIf TR_D = 1 Then
+    R_D = "A"
+    End If
+    
+    If TR_T = 4 Then
+    R_T = "D"
+    ElseIf TR_T = 3 Then
+    R_T = "C"
+    ElseIf TR_T = 2 Then
+    R_T = "B"
+    ElseIf TR_T = 1 Then
+    R_T = "A"
+    End If
+    
+    ThisWorkbook.Worksheets("Safeguard Results").Activate
+            Range("E8").Value = Application.WorksheetFunction.Max(NNR_NH, NNR_HU, NNR_R, NNR_CA, NNR_IP, NNR_TI)
+            Range("E10").Value = Application.WorksheetFunction.Max(RNR_NH, RNR_HU, RNR_R, RNR_CA, RNR_IP, RNR_TI)
+            Range("E9").Value = Application.WorksheetFunction.Max(NPR_NH, NPR_HU, NPR_R, NPR_CA, NPR_IP, NPR_TI)
+            Range("E11").Value = Application.WorksheetFunction.Max(RPR_NH, RPR_HU, RPR_R, RPR_CA, RPR_IP, RPR_TI)
+            Range("E12").Value = Application.WorksheetFunction.Max(F_NH, F_HU, F_R, F_CA, F_IP, F_TI)
+            Range("E13").Value = Application.WorksheetFunction.Max(H_NH, H_HU, H_R, H_CA, H_IP, H_TI)
+            Range("E14").Value = Application.WorksheetFunction.Max(D_NH, D_HU, D_R, D_CA, D_IP, D_TI)
+            Range("E15").Value = Application.WorksheetFunction.Max(T_NH, T_HU, T_R, T_CA, T_IP, T_TI)
+            
+            Range("F8").Value = R_NNR
+            Range("F10").Value = R_RNR
+            Range("F9").Value = R_NPR
+            Range("F11").Value = R_RPR
+            Range("F12").Value = R_F
+            Range("F13").Value = R_H
+            Range("F14").Value = R_D
+            Range("F15").Value = R_T
+     
+     If PC >= TR_NNR Then
+     Range("G8").Value = "Accepted"
+     Else
+     Range("G8").Value = "Rejected"
+     End If
+     
+     If PC >= TR_RNR Then
+     Range("G10").Value = "Accepted"
+     Else
+     Range("G10").Value = "Rejected"
+     End If
+     
+     If PC >= TR_NPR Then
+     Range("G9").Value = "Accepted"
+     Else
+     Range("G9").Value = "Rejected"
+     End If
+    
+     If PC >= TR_RPR Then
+     Range("G11").Value = "Accepted"
+     Else
+     Range("G11").Value = "Rejected"
+     End If
+     
+     If PC >= TR_F Then
+     Range("G12").Value = "Accepted"
+     Else
+     Range("G12").Value = "Rejected"
+     End If
+ 
+     If PC >= TR_H Then
+     Range("G13").Value = "Accepted"
+     Else
+     Range("G13").Value = "Rejected"
+     End If
+     
+     If PC >= TR_D Then
+     Range("G14").Value = "Accepted"
+     Else
+     Range("G14").Value = "Rejected"
+     End If
+      
+    If PC >= TR_T Then
+     Range("G15").Value = "Accepted"
+     Else
+     Range("G15").Value = "Rejected"
+     End If
+    
+    
+Exit Function
+HandleErr:
+    MsgBox "Error#SF occurred." & vbCrLf & "#" & Err.Number & ":" & Err.Description
+    F_Safeguard = False
+
+End Function
+
+
+
+Sub TFinf_Trucking()
+        
+        Worksheets("Econ. Results & Conclusions").Activate
+        Range("d12").Value = "Sustainable solution is technically infeasible"
+        Range("E53").Value = "infeasible"
+        Range("E60").Value = "Sustainable solution is technically infeasible"
+        Range("E76").Value = "Sustainable solution is technically infeasible"
+        Range("E77").Value = "Sustainable solution is technically infeasible"
+        Range("E89").Value = "Sustainable solution is technically infeasible"
+        Range("E90").Value = "Sustainable solution is technically infeasible"
+        Range("C103").Value = "infeasible"
+        Range("C104").Value = "infeasible"
+        Range("D103").Value = "infeasible"
+        
+        Range("B114:E114").Select
+        Selection.Interior.ColorIndex = xlNone
+        Range("B114").Value = ""
+
+End Sub
+Function F_DredgingCost(d_M As Double, i_cycle_sed As Double, s_ECD As String) As Double
+      Dim d_ECD As Double
+      
+      If s_ECD = "N/A" Or s_ECD = "n/a" Or s_ECD = "n/A" Or s_ECD = "N/a" Then
+      
+        Select Case d_M * i_cycle_sed
+            Case Is < 0.15 * (10 ^ 6)
+            F_DredgingCost = 15#
+            
+            Case Is > 16 * (10 ^ 6)
+            F_DredgingCost = 2#
+            
+            Case Else
+            F_DredgingCost = 6.61588727859064 * (d_M * i_cycle_sed / (10 ^ 6)) ^ -0.431483663524377
+            
+        End Select
+        
+     Else: d_ECD = Val(s_ECD)
+           F_DredgingCost = d_ECD
+     
+     End If
+     
+End Function
+
